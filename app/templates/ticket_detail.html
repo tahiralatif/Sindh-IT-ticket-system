@@ -120,7 +120,7 @@
                     <div style="margin-top:16px;display:flex;flex-wrap:wrap;gap:20px;font-size:13px;color:var(--text-secondary);">
                         <span><i class="fa fa-tag" style="color:var(--primary);"></i> <strong>Category:</strong> {{ ticket.category|title }}</span>
                         <span><i class="fa fa-calendar" style="color:var(--primary);"></i> <strong>Submitted:</strong> {{ ticket.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
-                        <span><i class="fa fa-sync" style="color:var(--primary);"></i> <strong>Updated:</strong> {{ ticket.updated_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                        <span><i class="fa fa-sync" style="color:var(--primary);"></i> <strong>Updated:</strong> {{ ticket.updated_at.strftime('%Y-%m-%d %H:%M') if ticket.updated_at else 'N/A' }}</span>
                     </div>
                 </div>
 

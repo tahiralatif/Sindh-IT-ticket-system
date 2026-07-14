@@ -561,7 +561,20 @@ async def admin_tickets(request: Request, db: AsyncSession = Depends(get_db)):
     if status_filter:
         query = query.where(Ticket.status == status_filter)
     if dept_filter:
-        query = query.where(Ticket.assigned_to_dept == int(dept_filter))
+        # Accept either department ID (number) or name (string)
+        if dept_filter.isdigit():
+            query = query.where(Ticket.assigned_to_dept == int(dept_filter))
+        else:
+            # Look up department ID by name
+            dept_result = await db.execute(
+                select(Department.id).where(Department.name.contains(dept_filter))
+            )
+            dept_ids = [r[0] for r in dept_result.all()]
+            if dept_ids:
+                query = query.where(Ticket.assigned_to_dept.in_(dept_ids))
+            else:
+                # No matching department — return no results
+                query = query.where(Ticket.id == -1)
     if service_filter:
         query = query.where(Ticket.service_name.contains(service_filter))
     if city_filter:
