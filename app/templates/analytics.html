@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics — Government Ticket System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+    
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+</head>
+<body>
+
+<!-- ═══ Top Bar (matches sindh.gov.pk) ═══ -->
+<div class="top-bar">
+    <div class="container">
+        <div class="top-bar-left">
+            <a href="http://www.sindh.gov.pk/" target="_blank"><i class="fa fa-home"></i></a>
+            <a href="#" title="Facebook"><i class="fab fa-facebook-f"></i></a>
+            <a href="#" title="Twitter"><i class="fab fa-twitter"></i></a>
+            <a href="#" title="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+            <a href="#" title="YouTube"><i class="fab fa-youtube"></i></a>
+        </div>
+        <div class="top-bar-right">
+            <a href="/notifications"><i class="fa fa-bell"></i>
+                
+                <span class="notif-badge">4</span>
+                
+            </a>
+            <span>|</span>
+            <a href="/logout"><i class="fa fa-sign-out-alt"></i> Logout</a>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ Header ═══ -->
+<header class="site-header">
+    <div class="header-inner">
+        <a href="/" class="header-brand">
+            <div class="logo-icon"><i class="fa fa-landmark"></i></div>
+            <div class="brand-text">
+                <h1>Science & Information Technology Department</h1>
+                <small>Government of Sindh — Ticket Management System</small>
+            </div>
+        </a>
+        <div style="display:flex;align-items:center;gap:16px;">
+            <span style="font-size:13px;color:var(--text-secondary);">
+                <i class="fa fa-user-circle"></i> Sindh IT Minister Office
+            </span>
+        </div>
+    </div>
+</header>
+
+<!-- ═══ Navigation ═══ -->
+<nav class="main-nav">
+    <div class="container">
+        <ul class="nav-list">
+            <li><a href="/" class=""><i class="fa fa-home icon"></i>Home</a></li>
+            
+            
+            <li><a href="/admin/tickets" class=""><i class="fa fa-ticket-alt icon"></i>All Tickets</a></li>
+            <li><a href="/admin/users" class=""><i class="fa fa-users-cog icon"></i>User Management</a></li>
+            <li><a href="/admin/analytics" class="active"><i class="fa fa-chart-bar icon"></i>Analytics</a></li>
+            
+            
+            <li><a href="/notifications" class=""><i class="fa fa-bell icon"></i>Notifications</a></li>
+        </ul>
+    </div>
+</nav>
+
+<!-- ═══ Content ═══ -->
+<div class="app-layout">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h3><i class="fa fa-bars"></i> Menu</h3>
+        </div>
+        <nav class="sidebar-nav">
+            
+            
+            <a href="/" class=""><span class="icon">📊</span> Dashboard</a>
+            <a href="/admin/tickets" class=""><span class="icon">🎫</span> All Tickets</a>
+            <a href="/admin/users" class=""><span class="icon">👥</span> User Management</a>
+            <a href="/admin/analytics" class="active"><span class="icon">📈</span> Analytics</a>
+            
+            
+            <a href="/notifications" class="">
+                <span class="icon">🔔</span> Notifications
+                
+                <span class="notif-badge">4</span>
+                
+            </a>
+        </nav>
+        <div class="sidebar-user">
+            <div class="name">Sindh IT Minister Office</div>
+            <div class="role">admin</div>
+            <a href="/logout" style="color:var(--text-muted);font-size:12px;margin-top:6px;display:inline-block;">Logout →</a>
+        </div>
+    </aside>
+    <div class="main-content">
+        
+<div class="page-header">
+    <div>
+        <h1>📈 Analytics Dashboard</h1>
+        <div class="subtitle">Ticket trends and performance metrics</div>
+    </div>
+</div>
+
+<!-- Resolution Stats -->
+<div class="stats-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px;">
+    <div class="stat-card"><div class="value" id="avgDays">—</div><div class="label">Avg Resolution (days)</div></div>
+    <div class="stat-card success"><div class="value" id="minDays">—</div><div class="label">Fastest Resolution</div></div>
+    <div class="stat-card warning"><div class="value" id="maxDays">—</div><div class="label">Slowest Resolution</div></div>
+</div>
+
+<!-- Charts Row 1 -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;">
+    <div class="card">
+        <div class="card-header"><h2>Status Distribution</h2></div>
+        <div style="height:280px;"><canvas id="statusChart"></canvas></div>
+    </div>
+    <div class="card">
+        <div class="card-header"><h2>Priority Distribution</h2></div>
+        <div style="height:280px;"><canvas id="priorityChart"></canvas></div>
+    </div>
+</div>
+
+<!-- Charts Row 2 -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;">
+    <div class="card">
+        <div class="card-header"><h2>Tickets Over Time</h2></div>
+        <div style="height:280px;"><canvas id="timelineChart"></canvas></div>
+    </div>
+    <div class="card">
+        <div class="card-header"><h2>Category Breakdown</h2></div>
+        <div style="height:280px;"><canvas id="categoryChart"></canvas></div>
+    </div>
+</div>
+
+<!-- Charts Row 3 -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+    <div class="card">
+        <div class="card-header"><h2>Tickets by Department</h2></div>
+        <div style="height:300px;"><canvas id="deptChart"></canvas></div>
+    </div>
+    <div class="card">
+        <div class="card-header"><h2>Status Breakdown</h2></div>
+        <div style="height:300px;"><canvas id="statusBarChart"></canvas></div>
+    </div>
+</div>
+
+<script>
+const COLORS = {
+    blue: '#3b82f6', green: '#059669', yellow: '#d97706',
+    red: '#dc2626', gray: '#64748b', cyan: '#0891b2',
+    purple: '#7c3aed', pink: '#ec4899', orange: '#f97316',
+    lime: '#84cc16'
+};
+const PALETTE = Object.values(COLORS);
+
+async function fetchJSON(url) {
+    const r = await fetch(url);
+    return r.json();
+}
+
+function doughnutConfig(labels, data, colors) {
+    return {
+        type: 'doughnut',
+        data: {
+            labels, datasets: [{ data, backgroundColor: colors, borderWidth: 0 }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position: 'right', labels: { padding: 12, font: { size: 12 } } } },
+            cutout: '55%'
+        }
+    };
+}
+
+function barConfig(labels, data, color) {
+    return {
+        type: 'bar',
+        data: {
+            labels, datasets: [{
+                data, backgroundColor: color || PALETTE[0],
+                borderRadius: 6, barThickness: 28
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    };
+}
+
+async function loadCharts() {
+    // Resolution stats
+    const res = await fetchJSON('/api/analytics/resolution');
+    document.getElementById('avgDays').textContent = res.avg_days || '—';
+    document.getElementById('minDays').textContent = res.min_days || '—';
+    document.getElementById('maxDays').textContent = res.max_days || '—';
+
+    // Status doughnut
+    const status = await fetchJSON('/api/analytics/status');
+    const statusLabels = Object.keys(status).map(s => s.replace('_', ' '));
+    new Chart(document.getElementById('statusChart'),
+        doughnutConfig(statusLabels, Object.values(status), PALETTE.slice(0, 6)));
+
+    // Status bar
+    new Chart(document.getElementById('statusBarChart'),
+        barConfig(statusLabels, Object.values(status)));
+
+    // Priority
+    const priority = await fetchJSON('/api/analytics/priority');
+    new Chart(document.getElementById('priorityChart'),
+        doughnutConfig(Object.keys(priority).map(p => p.charAt(0).toUpperCase() + p.slice(1)),
+            Object.values(priority), [COLORS.green, COLORS.yellow, COLORS.orange, COLORS.red]));
+
+    // Timeline
+    const timeline = await fetchJSON('/api/analytics/over-time');
+    new Chart(document.getElementById('timelineChart'), {
+        type: 'line',
+        data: {
+            labels: Object.keys(timeline).map(d => d.slice(5)),
+            datasets: [{
+                label: 'Tickets',
+                data: Object.values(timeline),
+                borderColor: COLORS.blue,
+                backgroundColor: 'rgba(59,130,246,0.1)',
+                fill: true, tension: 0.4, pointRadius: 3
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+
+    // Category
+    const categories = await fetchJSON('/api/analytics/categories');
+    new Chart(document.getElementById('categoryChart'),
+        doughnutConfig(Object.keys(categories).map(c => c ? c.charAt(0).toUpperCase() + c.slice(1) : 'General'),
+            Object.values(categories), PALETTE));
+
+    // Department
+    const depts = await fetchJSON('/api/analytics/departments');
+    const deptLabels = Object.keys(depts).map(d => d.replace(' Department', ''));
+    new Chart(document.getElementById('deptChart'), {
+        type: 'bar',
+        data: {
+            labels: deptLabels,
+            datasets: [{
+                data: Object.values(depts),
+                backgroundColor: PALETTE,
+                borderRadius: 6, barThickness: 20
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+            plugins: { legend: { display: false } },
+            scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+}
+
+loadCharts();
+</script>
+
+    </div>
+</div>
+
+
+</body>
+</html>

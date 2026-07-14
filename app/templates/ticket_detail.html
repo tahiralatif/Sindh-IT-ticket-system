@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ticket SIT-20260713-0001 — Government Ticket System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+    
+</head>
+<body>
+
+<!-- ═══ Top Bar (matches sindh.gov.pk) ═══ -->
+<div class="top-bar">
+    <div class="container">
+        <div class="top-bar-left">
+            <a href="http://www.sindh.gov.pk/" target="_blank"><i class="fa fa-home"></i></a>
+            <a href="#" title="Facebook"><i class="fab fa-facebook-f"></i></a>
+            <a href="#" title="Twitter"><i class="fab fa-twitter"></i></a>
+            <a href="#" title="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+            <a href="#" title="YouTube"><i class="fab fa-youtube"></i></a>
+        </div>
+        <div class="top-bar-right">
+            <a href="/notifications"><i class="fa fa-bell"></i>
+                
+                <span class="notif-badge">4</span>
+                
+            </a>
+            <span>|</span>
+            <a href="/logout"><i class="fa fa-sign-out-alt"></i> Logout</a>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ Header ═══ -->
+<header class="site-header">
+    <div class="header-inner">
+        <a href="/" class="header-brand">
+            <div class="logo-icon"><i class="fa fa-landmark"></i></div>
+            <div class="brand-text">
+                <h1>Science & Information Technology Department</h1>
+                <small>Government of Sindh — Ticket Management System</small>
+            </div>
+        </a>
+        <div style="display:flex;align-items:center;gap:16px;">
+            <span style="font-size:13px;color:var(--text-secondary);">
+                <i class="fa fa-user-circle"></i> Sindh IT Minister Office
+            </span>
+        </div>
+    </div>
+</header>
+
+<!-- ═══ Navigation ═══ -->
+<nav class="main-nav">
+    <div class="container">
+        <ul class="nav-list">
+            <li><a href="/" class=""><i class="fa fa-home icon"></i>Home</a></li>
+            
+            
+            <li><a href="/admin/tickets" class=""><i class="fa fa-ticket-alt icon"></i>All Tickets</a></li>
+            <li><a href="/admin/users" class=""><i class="fa fa-users-cog icon"></i>User Management</a></li>
+            <li><a href="/admin/analytics" class=""><i class="fa fa-chart-bar icon"></i>Analytics</a></li>
+            
+            
+            <li><a href="/notifications" class=""><i class="fa fa-bell icon"></i>Notifications</a></li>
+        </ul>
+    </div>
+</nav>
+
+<!-- ═══ Content ═══ -->
+<div class="app-layout">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h3><i class="fa fa-bars"></i> Menu</h3>
+        </div>
+        <nav class="sidebar-nav">
+            
+            
+            <a href="/" class=""><span class="icon">📊</span> Dashboard</a>
+            <a href="/admin/tickets" class=""><span class="icon">🎫</span> All Tickets</a>
+            <a href="/admin/users" class=""><span class="icon">👥</span> User Management</a>
+            <a href="/admin/analytics" class=""><span class="icon">📈</span> Analytics</a>
+            
+            
+            <a href="/notifications" class="">
+                <span class="icon">🔔</span> Notifications
+                
+                <span class="notif-badge">4</span>
+                
+            </a>
+        </nav>
+        <div class="sidebar-user">
+            <div class="name">Sindh IT Minister Office</div>
+            <div class="role">admin</div>
+            <a href="/logout" style="color:var(--text-muted);font-size:12px;margin-top:6px;display:inline-block;">Logout →</a>
+        </div>
+    </aside>
+    <div class="main-content">
+        
+<div class="page-header">
+    <div>
+        <h1 style="font-family:monospace;">SIT-20260713-0001</h1>
+        <div class="subtitle">Road pothole on main highway causing accidents</div>
+    </div>
+    <div style="display:flex;gap:8px;">
+        <span class="badge badge-submitted">Submitted</span>
+        <span class="badge badge-high">High</span>
+    </div>
+</div>
+
+<div style="display:grid;grid-template-columns:2fr 1fr;gap:20px;">
+    <!-- Main Content -->
+    <div>
+        <div class="card" style="margin-bottom:20px;">
+            <h3 style="margin-bottom:12px;">Description</h3>
+            <p style="line-height:1.8;color:var(--text);">There is a large pothole on Sindh highway near Hyderabad causing multiple accidents daily</p>
+            <div style="margin-top:16px;display:flex;gap:24px;font-size:13px;color:var(--text-secondary);">
+                <span>📋 <strong>Category:</strong> complaint</span>
+                <span>📅 <strong>Submitted:</strong> 2026-07-13 15:37</span>
+                <span>🔄 <strong>Updated:</strong> 2026-07-13 15:37</span>
+            </div>
+        </div>
+
+        <!-- Attachments -->
+        <div class="card" style="margin-bottom:20px;">
+            <div class="card-header">
+                <h2>📎 Attachments</h2>
+            </div>
+            
+            <p style="color:var(--text-muted);font-size:13px;">No files attached yet</p>
+            
+
+            <!-- Upload Form -->
+            
+            
+            <form method="post" action="/ticket/1/upload" enctype="multipart/form-data"
+                  style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);display:flex;gap:12px;align-items:end;">
+                <div style="flex:1;">
+                    <label style="font-size:12px;color:var(--text-secondary);font-weight:600;">Attach file (max 10MB)</label>
+                    <input type="file" name="file" class="form-control" required style="margin-top:4px;">
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm">📤 Upload</button>
+            </form>
+            
+            
+        </div>
+
+        <!-- Status History -->
+        <div class="card">
+            <h3 style="margin-bottom:16px;">📋 Status History</h3>
+            
+            <div class="timeline">
+                
+                <div class="timeline-item submitted">
+                    <div class="timeline-meta">2026-07-13 15:37 — Sindh IT Minister Office</div>
+                    <div class="timeline-content">
+                        
+                        <span class="badge badge-submitted">Submitted</span>
+                    </div>
+                    
+                    <div class="timeline-note">Ticket submitted</div>
+                    
+                </div>
+                
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div>
+        <!-- Admin Actions -->
+        
+        <div class="card" style="margin-bottom:20px;">
+            <h3 style="margin-bottom:16px;">🔧 Admin Actions</h3>
+            <form method="post" action="/ticket/1/update">
+                <div class="form-group">
+                    <label>Assign to Department</label>
+                    <select name="department_id" class="form-control">
+                        <option value="">— Select Department —</option>
+                        
+                        <option value="10" >Agriculture Department</option>
+                        
+                        <option value="2" >Education Department</option>
+                        
+                        <option value="6" >Excise &amp; Taxation</option>
+                        
+                        <option value="1" >Health Department</option>
+                        
+                        <option value="8" >Information Department</option>
+                        
+                        <option value="5" >Police Department</option>
+                        
+                        <option value="4" >Revenue Department</option>
+                        
+                        <option value="7" >Social Welfare</option>
+                        
+                        <option value="3" >Transport Department</option>
+                        
+                        <option value="9" >Works &amp; Services</option>
+                        
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Status</label>
+                    <select name="status" class="form-control">
+                        <option value="submitted" selected>Submitted</option>
+                        <option value="assigned" >Assigned</option>
+                        <option value="in_progress" >In Progress</option>
+                        <option value="resolved" >Resolved</option>
+                        <option value="closed" >Closed</option>
+                        <option value="rejected" >Rejected</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Priority</label>
+                    <select name="priority" class="form-control">
+                        <option value="low" >Low</option>
+                        <option value="medium" >Medium</option>
+                        <option value="high" selected>High</option>
+                        <option value="urgent" >Urgent</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Note (optional)</label>
+                    <textarea name="note" class="form-control" rows="2" placeholder="Add a note..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Update Ticket</button>
+            </form>
+        </div>
+        
+
+        
+
+        <!-- Info Card -->
+        <div class="card">
+            <h3 style="margin-bottom:12px;">ℹ️ Ticket Info</h3>
+            <div style="font-size:13px;line-height:2;">
+                <div><strong>Submitted by:</strong> </div>
+                <div><strong>Department:</strong> Pending</div>
+                <div><strong>Created:</strong> 2026-07-13 15:37</div>
+                
+            </div>
+        </div>
+    </div>
+</div>
+
+    </div>
+</div>
+
+
+</body>
+</html>

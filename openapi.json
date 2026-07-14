@@ -1,0 +1,1282 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "Sindh IT Ticket System",
+        "version": "2.0.0"
+    },
+    "paths": {
+        "/login": {
+            "get": {
+                "summary": "Login Page",
+                "operationId": "login_page_login_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "text/html": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "summary": "Login Submit",
+                "operationId": "login_submit_login_post",
+                "requestBody": {
+                    "content": {
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Body_login_submit_login_post"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "text/html": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/register": {
+            "get": {
+                "summary": "Register Page",
+                "operationId": "register_page_register_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "text/html": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "summary": "Register Submit",
+                "operationId": "register_submit_register_post",
+                "requestBody": {
+                    "content": {
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Body_register_submit_register_post"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "text/html": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/logout": {
+            "get": {
+                "summary": "Logout",
+                "operationId": "logout_logout_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/notifications": {
+            "get": {
+                "summary": "Notifications Page",
+                "operationId": "notifications_page_notifications_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "text/html": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/notifications/mark-read/{notif_id}": {
+            "post": {
+                "summary": "Mark Notification Read",
+                "operationId": "mark_notification_read_notifications_mark_read__notif_id__post",
+                "parameters": [
+                    {
+                        "name": "notif_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "title": "Notif Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/notifications/mark-all-read": {
+            "post": {
+                "summary": "Mark All Notifications Read",
+                "operationId": "mark_all_notifications_read_notifications_mark_all_read_post",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/unread-count": {
+            "get": {
+                "summary": "Api Unread Count",
+                "operationId": "api_unread_count_api_unread_count_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/": {
+            "get": {
+                "summary": "Dashboard",
+                "operationId": "dashboard__get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "text/html": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/submit": {
+            "get": {
+                "summary": "Submit Page",
+                "operationId": "submit_page_submit_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "text/html": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "summary": "Submit Ticket",
+                "operationId": "submit_ticket_submit_post",
+                "requestBody": {
+                    "content": {
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Body_submit_ticket_submit_post"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "text/html": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/suggest-dept": {
+            "get": {
+                "summary": "Api Suggest Dept",
+                "description": "API endpoint for real-time department suggestion.",
+                "operationId": "api_suggest_dept_api_suggest_dept_get",
+                "parameters": [
+                    {
+                        "name": "subject",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "",
+                            "title": "Subject"
+                        }
+                    },
+                    {
+                        "name": "description",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "",
+                            "title": "Description"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/track": {
+            "get": {
+                "summary": "Track Page",
+                "operationId": "track_page_track_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "text/html": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "summary": "Track Search",
+                "operationId": "track_search_track_post",
+                "requestBody": {
+                    "content": {
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Body_track_search_track_post"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "text/html": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/ticket/{ticket_id}": {
+            "get": {
+                "summary": "Ticket Detail",
+                "operationId": "ticket_detail_ticket__ticket_id__get",
+                "parameters": [
+                    {
+                        "name": "ticket_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "title": "Ticket Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "text/html": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/ticket/{ticket_id}/update": {
+            "post": {
+                "summary": "Ticket Update",
+                "operationId": "ticket_update_ticket__ticket_id__update_post",
+                "parameters": [
+                    {
+                        "name": "ticket_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "title": "Ticket Id"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Body_ticket_update_ticket__ticket_id__update_post"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "text/html": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/ticket/{ticket_id}/upload": {
+            "post": {
+                "summary": "Upload File",
+                "operationId": "upload_file_ticket__ticket_id__upload_post",
+                "parameters": [
+                    {
+                        "name": "ticket_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "title": "Ticket Id"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Body_upload_file_ticket__ticket_id__upload_post"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/uploads/{ticket_id}/{stored_name}": {
+            "get": {
+                "summary": "Download File",
+                "operationId": "download_file_uploads__ticket_id___stored_name__get",
+                "parameters": [
+                    {
+                        "name": "ticket_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "title": "Ticket Id"
+                        }
+                    },
+                    {
+                        "name": "stored_name",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "title": "Stored Name"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/tickets": {
+            "get": {
+                "summary": "Admin Tickets",
+                "operationId": "admin_tickets_admin_tickets_get",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "",
+                            "title": "Status"
+                        }
+                    },
+                    {
+                        "name": "dept",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "title": "Dept"
+                        }
+                    },
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "",
+                            "title": "Q"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "title": "Page"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "text/html": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/users": {
+            "get": {
+                "summary": "Admin Users",
+                "operationId": "admin_users_admin_users_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "text/html": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/users/create": {
+            "post": {
+                "summary": "Admin Create User",
+                "operationId": "admin_create_user_admin_users_create_post",
+                "requestBody": {
+                    "content": {
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Body_admin_create_user_admin_users_create_post"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "text/html": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/users/{user_id}/toggle": {
+            "post": {
+                "summary": "Admin Toggle User",
+                "operationId": "admin_toggle_user_admin_users__user_id__toggle_post",
+                "parameters": [
+                    {
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "title": "User Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/users/{user_id}/update-role": {
+            "post": {
+                "summary": "Admin Update User Role",
+                "operationId": "admin_update_user_role_admin_users__user_id__update_role_post",
+                "parameters": [
+                    {
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "title": "User Id"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Body_admin_update_user_role_admin_users__user_id__update_role_post"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/analytics": {
+            "get": {
+                "summary": "Admin Analytics",
+                "operationId": "admin_analytics_admin_analytics_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "text/html": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/analytics/status": {
+            "get": {
+                "summary": "Api Analytics Status",
+                "operationId": "api_analytics_status_api_analytics_status_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/analytics/categories": {
+            "get": {
+                "summary": "Api Analytics Categories",
+                "operationId": "api_analytics_categories_api_analytics_categories_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/analytics/priority": {
+            "get": {
+                "summary": "Api Analytics Priority",
+                "operationId": "api_analytics_priority_api_analytics_priority_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/analytics/over-time": {
+            "get": {
+                "summary": "Api Analytics Over Time",
+                "operationId": "api_analytics_over_time_api_analytics_over_time_get",
+                "parameters": [
+                    {
+                        "name": "days",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 30,
+                            "title": "Days"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/analytics/departments": {
+            "get": {
+                "summary": "Api Analytics Departments",
+                "operationId": "api_analytics_departments_api_analytics_departments_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/analytics/resolution": {
+            "get": {
+                "summary": "Api Analytics Resolution",
+                "operationId": "api_analytics_resolution_api_analytics_resolution_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/dept/tickets": {
+            "get": {
+                "summary": "Dept Tickets",
+                "operationId": "dept_tickets_dept_tickets_get",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "",
+                            "title": "Status"
+                        }
+                    },
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "",
+                            "title": "Q"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "title": "Page"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "text/html": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/stats": {
+            "get": {
+                "summary": "Api Stats",
+                "operationId": "api_stats_api_stats_get",
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/ticket/{ticket_id}": {
+            "get": {
+                "summary": "Api Ticket",
+                "operationId": "api_ticket_api_ticket__ticket_id__get",
+                "parameters": [
+                    {
+                        "name": "ticket_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "title": "Ticket Id"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/HTTPValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "Body_admin_create_user_admin_users_create_post": {
+                "properties": {
+                    "username": {
+                        "type": "string",
+                        "title": "Username"
+                    },
+                    "password": {
+                        "type": "string",
+                        "title": "Password"
+                    },
+                    "full_name": {
+                        "type": "string",
+                        "title": "Full Name"
+                    },
+                    "email": {
+                        "type": "string",
+                        "title": "Email",
+                        "default": ""
+                    },
+                    "phone": {
+                        "type": "string",
+                        "title": "Phone",
+                        "default": ""
+                    },
+                    "role": {
+                        "type": "string",
+                        "title": "Role",
+                        "default": "citizen"
+                    },
+                    "department_id": {
+                        "type": "integer",
+                        "title": "Department Id"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "username",
+                    "password",
+                    "full_name"
+                ],
+                "title": "Body_admin_create_user_admin_users_create_post"
+            },
+            "Body_admin_update_user_role_admin_users__user_id__update_role_post": {
+                "properties": {
+                    "role": {
+                        "type": "string",
+                        "title": "Role"
+                    },
+                    "department_id": {
+                        "type": "integer",
+                        "title": "Department Id"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "role"
+                ],
+                "title": "Body_admin_update_user_role_admin_users__user_id__update_role_post"
+            },
+            "Body_login_submit_login_post": {
+                "properties": {
+                    "username": {
+                        "type": "string",
+                        "title": "Username"
+                    },
+                    "password": {
+                        "type": "string",
+                        "title": "Password"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "username",
+                    "password"
+                ],
+                "title": "Body_login_submit_login_post"
+            },
+            "Body_register_submit_register_post": {
+                "properties": {
+                    "username": {
+                        "type": "string",
+                        "title": "Username"
+                    },
+                    "password": {
+                        "type": "string",
+                        "title": "Password"
+                    },
+                    "full_name": {
+                        "type": "string",
+                        "title": "Full Name"
+                    },
+                    "email": {
+                        "type": "string",
+                        "title": "Email",
+                        "default": ""
+                    },
+                    "phone": {
+                        "type": "string",
+                        "title": "Phone",
+                        "default": ""
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "username",
+                    "password",
+                    "full_name"
+                ],
+                "title": "Body_register_submit_register_post"
+            },
+            "Body_submit_ticket_submit_post": {
+                "properties": {
+                    "subject": {
+                        "type": "string",
+                        "title": "Subject"
+                    },
+                    "description": {
+                        "type": "string",
+                        "title": "Description"
+                    },
+                    "category": {
+                        "type": "string",
+                        "title": "Category",
+                        "default": "general"
+                    },
+                    "priority": {
+                        "type": "string",
+                        "title": "Priority",
+                        "default": "medium"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "subject",
+                    "description"
+                ],
+                "title": "Body_submit_ticket_submit_post"
+            },
+            "Body_ticket_update_ticket__ticket_id__update_post": {
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "title": "Status"
+                    },
+                    "department_id": {
+                        "type": "integer",
+                        "title": "Department Id"
+                    },
+                    "assigned_user": {
+                        "type": "integer",
+                        "title": "Assigned User"
+                    },
+                    "priority": {
+                        "type": "string",
+                        "title": "Priority"
+                    },
+                    "note": {
+                        "type": "string",
+                        "title": "Note",
+                        "default": ""
+                    }
+                },
+                "type": "object",
+                "title": "Body_ticket_update_ticket__ticket_id__update_post"
+            },
+            "Body_track_search_track_post": {
+                "properties": {
+                    "ticket_number": {
+                        "type": "string",
+                        "title": "Ticket Number"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "ticket_number"
+                ],
+                "title": "Body_track_search_track_post"
+            },
+            "Body_upload_file_ticket__ticket_id__upload_post": {
+                "properties": {
+                    "file": {
+                        "type": "string",
+                        "contentMediaType": "application/octet-stream",
+                        "title": "File"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "file"
+                ],
+                "title": "Body_upload_file_ticket__ticket_id__upload_post"
+            },
+            "HTTPValidationError": {
+                "properties": {
+                    "detail": {
+                        "items": {
+                            "$ref": "#/components/schemas/ValidationError"
+                        },
+                        "type": "array",
+                        "title": "Detail"
+                    }
+                },
+                "type": "object",
+                "title": "HTTPValidationError"
+            },
+            "ValidationError": {
+                "properties": {
+                    "loc": {
+                        "items": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "integer"
+                                }
+                            ]
+                        },
+                        "type": "array",
+                        "title": "Location"
+                    },
+                    "msg": {
+                        "type": "string",
+                        "title": "Message"
+                    },
+                    "type": {
+                        "type": "string",
+                        "title": "Error Type"
+                    },
+                    "input": {
+                        "title": "Input"
+                    },
+                    "ctx": {
+                        "type": "object",
+                        "title": "Context"
+                    }
+                },
+                "type": "object",
+                "required": [
+                    "loc",
+                    "msg",
+                    "type"
+                ],
+                "title": "ValidationError"
+            }
+        }
+    }
+}

@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notifications — Government Ticket System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+    
+</head>
+<body>
+
+<!-- ═══ Top Bar (matches sindh.gov.pk) ═══ -->
+<div class="top-bar">
+    <div class="container">
+        <div class="top-bar-left">
+            <a href="http://www.sindh.gov.pk/" target="_blank"><i class="fa fa-home"></i></a>
+            <a href="#" title="Facebook"><i class="fab fa-facebook-f"></i></a>
+            <a href="#" title="Twitter"><i class="fab fa-twitter"></i></a>
+            <a href="#" title="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+            <a href="#" title="YouTube"><i class="fab fa-youtube"></i></a>
+        </div>
+        <div class="top-bar-right">
+            <a href="/notifications"><i class="fa fa-bell"></i>
+                
+                <span class="notif-badge">4</span>
+                
+            </a>
+            <span>|</span>
+            <a href="/logout"><i class="fa fa-sign-out-alt"></i> Logout</a>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ Header ═══ -->
+<header class="site-header">
+    <div class="header-inner">
+        <a href="/" class="header-brand">
+            <div class="logo-icon"><i class="fa fa-landmark"></i></div>
+            <div class="brand-text">
+                <h1>Science & Information Technology Department</h1>
+                <small>Government of Sindh — Ticket Management System</small>
+            </div>
+        </a>
+        <div style="display:flex;align-items:center;gap:16px;">
+            <span style="font-size:13px;color:var(--text-secondary);">
+                <i class="fa fa-user-circle"></i> Sindh IT Minister Office
+            </span>
+        </div>
+    </div>
+</header>
+
+<!-- ═══ Navigation ═══ -->
+<nav class="main-nav">
+    <div class="container">
+        <ul class="nav-list">
+            <li><a href="/" class=""><i class="fa fa-home icon"></i>Home</a></li>
+            
+            
+            <li><a href="/admin/tickets" class=""><i class="fa fa-ticket-alt icon"></i>All Tickets</a></li>
+            <li><a href="/admin/users" class=""><i class="fa fa-users-cog icon"></i>User Management</a></li>
+            <li><a href="/admin/analytics" class=""><i class="fa fa-chart-bar icon"></i>Analytics</a></li>
+            
+            
+            <li><a href="/notifications" class="active"><i class="fa fa-bell icon"></i>Notifications</a></li>
+        </ul>
+    </div>
+</nav>
+
+<!-- ═══ Content ═══ -->
+<div class="app-layout">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h3><i class="fa fa-bars"></i> Menu</h3>
+        </div>
+        <nav class="sidebar-nav">
+            
+            
+            <a href="/" class=""><span class="icon">📊</span> Dashboard</a>
+            <a href="/admin/tickets" class=""><span class="icon">🎫</span> All Tickets</a>
+            <a href="/admin/users" class=""><span class="icon">👥</span> User Management</a>
+            <a href="/admin/analytics" class=""><span class="icon">📈</span> Analytics</a>
+            
+            
+            <a href="/notifications" class="active">
+                <span class="icon">🔔</span> Notifications
+                
+                <span class="notif-badge">4</span>
+                
+            </a>
+        </nav>
+        <div class="sidebar-user">
+            <div class="name">Sindh IT Minister Office</div>
+            <div class="role">admin</div>
+            <a href="/logout" style="color:var(--text-muted);font-size:12px;margin-top:6px;display:inline-block;">Logout →</a>
+        </div>
+    </aside>
+    <div class="main-content">
+        
+<div class="page-header">
+    <div>
+        <h1>🔔 Notifications</h1>
+        <div class="subtitle">Your notification history</div>
+    </div>
+    <form method="post" action="/notifications/mark-all-read" style="display:inline;">
+        <button type="submit" class="btn btn-ghost btn-sm">✓ Mark all read</button>
+    </form>
+</div>
+
+<div class="card">
+    
+    
+    <div class="notif-item unread" style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;gap:12px;align-items:start;">
+        <div style="font-size:24px;flex-shrink:0;">ℹ️</div>
+        <div style="flex:1;">
+            <div style="font-weight:600;font-size:14px;margin-bottom:2px;">New Ticket: SIT-20260714-0001</div>
+            <div style="font-size:13px;color:var(--text-secondary);line-height:1.5;white-space:pre-line;">A new ticket has been submitted by Sindh IT Minister Office.
+
+Subject: Water supply broken in Hyderabad
+Suggested Department: Works &amp; Services</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">2026-07-14 06:03</div>
+        </div>
+        <div style="flex-shrink:0;">
+            
+            <form method="post" action="/notifications/mark-read/4" style="display:inline;">
+                <button type="submit" class="btn btn-ghost btn-sm" title="Mark as read">✓</button>
+            </form>
+            
+        </div>
+    </div>
+    
+    <div class="notif-item unread" style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;gap:12px;align-items:start;">
+        <div style="font-size:24px;flex-shrink:0;">ℹ️</div>
+        <div style="flex:1;">
+            <div style="font-weight:600;font-size:14px;margin-bottom:2px;">New Ticket: SIT-20260713-0003</div>
+            <div style="font-size:13px;color:var(--text-secondary);line-height:1.5;white-space:pre-line;">A new ticket has been submitted by Sindh IT Minister Office.
+
+Subject: Car theft in Karachi Gulshan
+Suggested Department: Police Department</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">2026-07-13 15:37</div>
+        </div>
+        <div style="flex-shrink:0;">
+            
+            <form method="post" action="/notifications/mark-read/3" style="display:inline;">
+                <button type="submit" class="btn btn-ghost btn-sm" title="Mark as read">✓</button>
+            </form>
+            
+        </div>
+    </div>
+    
+    <div class="notif-item unread" style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;gap:12px;align-items:start;">
+        <div style="font-size:24px;flex-shrink:0;">ℹ️</div>
+        <div style="flex:1;">
+            <div style="font-weight:600;font-size:14px;margin-bottom:2px;">New Ticket: SIT-20260713-0002</div>
+            <div style="font-size:13px;color:var(--text-secondary);line-height:1.5;white-space:pre-line;">A new ticket has been submitted by Sindh IT Minister Office.
+
+Subject: University admission system broken
+Suggested Department: Education Department</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">2026-07-13 15:37</div>
+        </div>
+        <div style="flex-shrink:0;">
+            
+            <form method="post" action="/notifications/mark-read/2" style="display:inline;">
+                <button type="submit" class="btn btn-ghost btn-sm" title="Mark as read">✓</button>
+            </form>
+            
+        </div>
+    </div>
+    
+    <div class="notif-item unread" style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;gap:12px;align-items:start;">
+        <div style="font-size:24px;flex-shrink:0;">ℹ️</div>
+        <div style="flex:1;">
+            <div style="font-weight:600;font-size:14px;margin-bottom:2px;">New Ticket: SIT-20260713-0001</div>
+            <div style="font-size:13px;color:var(--text-secondary);line-height:1.5;white-space:pre-line;">A new ticket has been submitted by Sindh IT Minister Office.
+
+Subject: Road pothole on main highway causing accidents
+Suggested Department: Transport Department</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">2026-07-13 15:37</div>
+        </div>
+        <div style="flex-shrink:0;">
+            
+            <form method="post" action="/notifications/mark-read/1" style="display:inline;">
+                <button type="submit" class="btn btn-ghost btn-sm" title="Mark as read">✓</button>
+            </form>
+            
+        </div>
+    </div>
+    
+    
+</div>
+
+<style>
+    .notif-item.unread { background: #f0f7ff; }
+    .notif-badge {
+        background: #dc2626;
+        color: #fff;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 2px 7px;
+        border-radius: 10px;
+        margin-left: auto;
+    }
+</style>
+
+    </div>
+</div>
+
+
+</body>
+</html>

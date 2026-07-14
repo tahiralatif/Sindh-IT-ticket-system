@@ -1,0 +1,82 @@
+{# Base template with shared layout #}
+{# Pass user_name, user_role, unread_count, is_admin, active_page #}
+{% macro top_bar(unread_count) %}
+<div class="top-bar">
+    <div class="container">
+        <div class="top-bar-left">
+            <a href="http://www.sindh.gov.pk/" target="_blank"><i class="fa fa-home"></i></a>
+            <a href="#" title="Facebook"><i class="fab fa-facebook-f"></i></a>
+            <a href="#" title="Twitter"><i class="fab fa-twitter"></i></a>
+            <a href="#" title="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+            <a href="#" title="YouTube"><i class="fab fa-youtube"></i></a>
+        </div>
+        <div class="top-bar-right">
+            <a href="/notifications"><i class="fa fa-bell"></i>
+                {% if unread_count %}<span class="notif-badge">{{ unread_count }}</span>{% endif %}
+            </a>
+            <span>|</span>
+            <a href="/logout"><i class="fa fa-sign-out-alt"></i> Logout</a>
+        </div>
+    </div>
+</div>
+{% endmacro %}
+
+{% macro site_header(user_name) %}
+<header class="site-header">
+    <div class="header-inner">
+        <a href="/" class="header-brand">
+            <div class="logo-icon"><i class="fa fa-landmark"></i></div>
+            <div class="brand-text">
+                <h1>Science & Information Technology Department</h1>
+                <small>Government of Sindh — Ticket Management System</small>
+            </div>
+        </a>
+        <div style="display:flex;align-items:center;gap:16px;">
+            <span style="font-size:13px;color:var(--text-secondary);">
+                <i class="fa fa-user-circle"></i> {{ user_name or 'Guest' }}
+            </span>
+        </div>
+    </div>
+</header>
+{% endmacro %}
+
+{% macro main_nav(active_page, is_admin) %}
+<nav class="main-nav">
+    <div class="container">
+        <ul class="nav-list">
+            <li><a href="/" class="{{ 'active' if active_page == 'dashboard' }}"><i class="fa fa-home icon"></i>Home</a></li>
+            {% if is_admin %}
+            <li><a href="/admin/tickets" class="{{ 'active' if active_page == 'tickets' }}"><i class="fa fa-ticket-alt icon"></i>All Tickets</a></li>
+            <li><a href="/admin/users" class="{{ 'active' if active_page == 'users' }}"><i class="fa fa-users-cog icon"></i>User Management</a></li>
+            <li><a href="/admin/analytics" class="{{ 'active' if active_page == 'analytics' }}"><i class="fa fa-chart-bar icon"></i>Analytics</a></li>
+            {% endif %}
+            <li><a href="/notifications" class="{{ 'active' if active_page == 'notifications' }}"><i class="fa fa-bell icon"></i>Notifications</a></li>
+        </ul>
+    </div>
+</nav>
+{% endmacro %}
+
+{% macro sidebar(user_name, user_role, unread_count, active_page, is_admin) %}
+<aside class="sidebar">
+    <div class="sidebar-header">
+        <h3><i class="fa fa-bars"></i> Menu</h3>
+    </div>
+    <nav class="sidebar-nav">
+        <a href="/" class="{{ 'active' if active_page == 'dashboard' }}"><span class="icon">📊</span> Dashboard</a>
+        {% if is_admin %}
+        <a href="/admin/tickets" class="{{ 'active' if active_page == 'tickets' }}"><span class="icon">🎫</span> All Tickets</a>
+        <a href="/admin/users" class="{{ 'active' if active_page == 'users' }}"><span class="icon">👥</span> User Management</a>
+        <a href="/admin/analytics" class="{{ 'active' if active_page == 'analytics' }}"><span class="icon">📈</span> Analytics</a>
+        {% endif %}
+        <a href="/notifications" class="{{ 'active' if active_page == 'notifications' }}">
+            <span class="icon">🔔</span> Notifications
+            {% if unread_count %}<span class="notif-badge">{{ unread_count }}</span>{% endif %}
+        </a>
+    </nav>
+    <div class="sidebar-user">
+        <div class="name">{{ user_name or 'Guest' }}</div>
+        <div class="role">{{ user_role or '' }}</div>
+        <a href="/logout" style="color:var(--text-muted);font-size:12px;margin-top:6px;display:inline-block;">Logout →</a>
+    </div>
+</aside>
+{% endmacro %}

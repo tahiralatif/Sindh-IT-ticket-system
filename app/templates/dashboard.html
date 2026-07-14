@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard — Government Ticket System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+    
+</head>
+<body>
+
+<!-- ═══ Top Bar (matches sindh.gov.pk) ═══ -->
+<div class="top-bar">
+    <div class="container">
+        <div class="top-bar-left">
+            <a href="http://www.sindh.gov.pk/" target="_blank"><i class="fa fa-home"></i></a>
+            <a href="#" title="Facebook"><i class="fab fa-facebook-f"></i></a>
+            <a href="#" title="Twitter"><i class="fab fa-twitter"></i></a>
+            <a href="#" title="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+            <a href="#" title="YouTube"><i class="fab fa-youtube"></i></a>
+        </div>
+        <div class="top-bar-right">
+            <a href="/notifications"><i class="fa fa-bell"></i>
+                
+                <span class="notif-badge">4</span>
+                
+            </a>
+            <span>|</span>
+            <a href="/logout"><i class="fa fa-sign-out-alt"></i> Logout</a>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ Header ═══ -->
+<header class="site-header">
+    <div class="header-inner">
+        <a href="/" class="header-brand">
+            <div class="logo-icon"><i class="fa fa-landmark"></i></div>
+            <div class="brand-text">
+                <h1>Science & Information Technology Department</h1>
+                <small>Government of Sindh — Ticket Management System</small>
+            </div>
+        </a>
+        <div style="display:flex;align-items:center;gap:16px;">
+            <span style="font-size:13px;color:var(--text-secondary);">
+                <i class="fa fa-user-circle"></i> Sindh IT Minister Office
+            </span>
+        </div>
+    </div>
+</header>
+
+<!-- ═══ Navigation ═══ -->
+<nav class="main-nav">
+    <div class="container">
+        <ul class="nav-list">
+            <li><a href="/" class="active"><i class="fa fa-home icon"></i>Home</a></li>
+            
+            
+            <li><a href="/admin/tickets" class=""><i class="fa fa-ticket-alt icon"></i>All Tickets</a></li>
+            <li><a href="/admin/users" class=""><i class="fa fa-users-cog icon"></i>User Management</a></li>
+            <li><a href="/admin/analytics" class=""><i class="fa fa-chart-bar icon"></i>Analytics</a></li>
+            
+            
+            <li><a href="/notifications" class=""><i class="fa fa-bell icon"></i>Notifications</a></li>
+        </ul>
+    </div>
+</nav>
+
+<!-- ═══ Content ═══ -->
+<div class="app-layout">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h3><i class="fa fa-bars"></i> Menu</h3>
+        </div>
+        <nav class="sidebar-nav">
+            
+            
+            <a href="/" class="active"><span class="icon">📊</span> Dashboard</a>
+            <a href="/admin/tickets" class=""><span class="icon">🎫</span> All Tickets</a>
+            <a href="/admin/users" class=""><span class="icon">👥</span> User Management</a>
+            <a href="/admin/analytics" class=""><span class="icon">📈</span> Analytics</a>
+            
+            
+            <a href="/notifications" class="">
+                <span class="icon">🔔</span> Notifications
+                
+                <span class="notif-badge">4</span>
+                
+            </a>
+        </nav>
+        <div class="sidebar-user">
+            <div class="name">Sindh IT Minister Office</div>
+            <div class="role">admin</div>
+            <a href="/logout" style="color:var(--text-muted);font-size:12px;margin-top:6px;display:inline-block;">Logout →</a>
+        </div>
+    </aside>
+    <div class="main-content">
+        
+<div class="page-header">
+    <div>
+        <h1><i class="fa fa-tachometer-alt"></i> Admin Dashboard</h1>
+        <div class="subtitle">Sindh IT Minister Office — Ticket Management</div>
+    </div>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card"><div class="value">4</div><div class="label">Total Tickets</div></div>
+    <div class="stat-card danger"><div class="value">4</div><div class="label">Pending Review</div></div>
+    <div class="stat-card warning"><div class="value">0</div><div class="label">Assigned</div></div>
+    <div class="stat-card info"><div class="value">0</div><div class="label">In Progress</div></div>
+    <div class="stat-card success"><div class="value">0</div><div class="label">Resolved</div></div>
+    <div class="stat-card"><div class="value">2</div><div class="label">Users</div></div>
+    <div class="stat-card"><div class="value">10</div><div class="label">Departments</div></div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2><i class="fa fa-clock"></i> Recent Tickets</h2>
+        <a href="/admin/tickets" class="btn btn-ghost btn-sm"><i class="fa fa-list"></i> View All</a>
+    </div>
+    
+    <div class="table-wrapper">
+        <table>
+            <thead><tr><th>#</th><th>Ticket</th><th>Subject</th><th>From</th><th>Department</th><th>Status</th><th>Priority</th></tr></thead>
+            <tbody>
+            
+            <tr>
+                <td style="color:var(--text-muted)">1</td>
+                <td><a href="/ticket/4" style="font-family:monospace;font-weight:700;">SIT-20260714-0001</a></td>
+                <td>Water supply broken in Hyderabad</td>
+                <td>Sindh IT Minister Office</td>
+                <td><span style="color:var(--text-muted)">Unassigned</span></td>
+                <td><span class="badge badge-submitted">Submitted</span></td>
+                <td><span class="badge badge-high">High</span></td>
+            </tr>
+            
+            <tr>
+                <td style="color:var(--text-muted)">2</td>
+                <td><a href="/ticket/3" style="font-family:monospace;font-weight:700;">SIT-20260713-0003</a></td>
+                <td>Car theft in Karachi Gulshan</td>
+                <td>Sindh IT Minister Office</td>
+                <td><span style="color:var(--text-muted)">Unassigned</span></td>
+                <td><span class="badge badge-submitted">Submitted</span></td>
+                <td><span class="badge badge-urgent">Urgent</span></td>
+            </tr>
+            
+            <tr>
+                <td style="color:var(--text-muted)">3</td>
+                <td><a href="/ticket/2" style="font-family:monospace;font-weight:700;">SIT-20260713-0002</a></td>
+                <td>University admission system broken</td>
+                <td>Sindh IT Minister Office</td>
+                <td><span style="color:var(--text-muted)">Unassigned</span></td>
+                <td><span class="badge badge-submitted">Submitted</span></td>
+                <td><span class="badge badge-medium">Medium</span></td>
+            </tr>
+            
+            <tr>
+                <td style="color:var(--text-muted)">4</td>
+                <td><a href="/ticket/1" style="font-family:monospace;font-weight:700;">SIT-20260713-0001</a></td>
+                <td>Road pothole on main highway causing acc...</td>
+                <td>Sindh IT Minister Office</td>
+                <td><span style="color:var(--text-muted)">Unassigned</span></td>
+                <td><span class="badge badge-submitted">Submitted</span></td>
+                <td><span class="badge badge-high">High</span></td>
+            </tr>
+            
+            </tbody>
+        </table>
+    </div>
+    
+</div>
+
+    </div>
+</div>
+
+
+</body>
+</html>
