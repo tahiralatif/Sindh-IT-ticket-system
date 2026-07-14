@@ -4,8 +4,8 @@ Government ticket management system for the Science & IT Department, Government 
 
 ## Features
 
-- **AI-Powered Department Routing** — LLM-based ticket classification with confidence scores
-- **Session Authentication** — Encrypted session cookies with CSRF protection
+- **AI-Powered Department Routing** — Groq LLM-based ticket classification with confidence scores
+- **Session Authentication** — Encrypted session cookies (Fernet) with CSRF protection
 - **Rate Limiting** — Login attempt throttling (5/minute)
 - **Dashboard** — Real-time ticket stats and recent tickets
 - **Admin Panel** — User management, ticket assignment, analytics
@@ -17,8 +17,8 @@ Government ticket management system for the Science & IT Department, Government 
 
 - **Backend:** Python FastAPI + SQLAlchemy + Jinja2
 - **Database:** SQLite (async via aiosqlite)
-- **Auth:** Encrypted session cookies (itsdangerous) + bcrypt password hashing
-- **AI:** OpenRouter API (meta-llama/llama-3.1-8b-instruct) with keyword fallback
+- **Auth:** Fernet-encrypted session cookies + bcrypt password hashing
+- **AI:** Groq API (llama-3.1-8b-instant via langchain-groq) with keyword fallback
 - **Security:** CSRF double-submit cookies, rate limiting (slowapi), SameSite=Lax
 
 ## Quick Start
@@ -29,7 +29,7 @@ pip install -r requirements.txt
 
 # Configure environment
 cp .env.example .env
-# Edit .env with your OPENROUTER_API_KEY
+# Edit .env with your GROQ_API_KEY
 
 # Run the server
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
@@ -50,7 +50,7 @@ Citizens can register at `/register`.
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `SECRET_KEY` | Secret key for session signing | Random hex |
-| `OPENROUTER_API_KEY` | API key for AI department suggestions | (empty = keyword fallback) |
+| `GROQ_API_KEY` | API key for Groq AI department suggestions | (empty = keyword fallback) |
 | `DATABASE_URL` | SQLite database URL | `sqlite+aiosqlite:///./sindh_tickets.db` |
 | `RATE_LIMIT_LOGIN` | Login rate limit | `5/minute` |
 

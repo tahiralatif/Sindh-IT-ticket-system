@@ -1,107 +1,141 @@
-"""AI-powered department suggestion using LLM proxy."""
-import json
-import httpx
-from typing import Optional
-from app.core.config import settings
+"""AI department suggestion using Groq via langchain-groq.
 
-# Department list for context
+Single classification call: ticket text in → department + confidence out.
+Keyword fallback if the API call fails.
+"""
+import os
+import json
+import re
+import logging
+from typing import Optional
+
+logger = logging.getLogger(__name__)
+
+# ─── Department list (must match the seeded departments) ──────────
 DEPARTMENTS = [
-    {"name": "Health Department", "code": "HEALTH"},
-    {"name": "Education Department", "code": "EDUCATION"},
-    {"name": "Transport Department", "code": "TRANSPORT"},
-    {"name": "Revenue Department", "code": "REVENUE"},
-    {"name": "Police Department", "code": "POLICE"},
-    {"name": "Excise & Taxation", "code": "EXCISE"},
-    {"name": "Social Welfare Department", "code": "SOCIAL"},
-    {"name": "Information Department", "code": "INFO"},
-    {"name": "Works & Services", "code": "WORKS"},
-    {"name": "Agriculture Department", "code": "AGRI"},
+    "Health Department",
+    "Education Department",
+    "Transport Department",
+    "Revenue Department",
+    "Police Department",
+    "Excise & Taxation",
+    "Social Welfare Department",
+    "Information Department",
+    "Works & Services",
+    "Agriculture Department",
 ]
 
-SYSTEM_PROMPT = """You are a government ticket classification AI for the Government of Sindh, Pakistan.
+DEPT_KEYWORDS = {
+    "Health Department": ["health", "hospital", "doctor", "medical", "medicine", "disease", "clinic", "patient", "medicine", "vaccination", "epidemic", "pharmacy", "ambulance", "surgery", "nurse"],
+    "Education Department": ["education", "school", "college", "university", "student", "teacher", "exam", "degree", "scholarship", "admission", "curriculum", "classroom"],
+    "Transport Department": ["transport", "road", "highway", "traffic", "bus", "vehicle", "pothole", "bridge", "commute", "route", "bypass", "motorway"],
+    "Revenue Department": ["revenue", "tax", "property", "land", "record", "mutation", "stamp", "registration", "assessment", "income", "revenue collection"],
+    "Police Department": ["police", "crime", "theft", "robbery", "murder", "assault", "arrest", "fir", "investigation", "safety", "security", "illegal"],
+    "Excise & Taxation": ["excise", "duty", "tobacco", "liquor", "vehicle tax", "license", "permit", "customs", "levy"],
+    "Social Welfare Department": ["social welfare", "poverty", "elderly", "child", "orphan", "welfare", "disability", "women", "shelter", "benefit", "allowance"],
+    "Information Department": ["information", "media", "press", "journalist", "news", "broadcast", "website", "social media", "publicity", "IT", "technology", "software"],
+    "Works & Services": ["water", "sewage", "electricity", "construction", "building", "drainage", "garbage", "sanitation", "maintenance", "repair", "infrastructure", "plumbing"],
+    "Agriculture Department": ["agriculture", "farming", "crop", "irrigation", "tractor", "fertilizer", "pesticide", "harvest", "livestock", "dairy", "fisheries", "seed"],
+}
 
-Given a ticket subject and description, determine the most appropriate department to handle it.
+SYSTEM_PROMPT = """You are a ticket classification system for the Government of Sindh, Pakistan.
 
-Available departments:
+Given a ticket's subject and description, classify it into exactly ONE of these departments:
+
 {departments}
 
-Return ONLY a JSON object in this exact format, nothing else:
-{{"dept": "<department name>", "confidence": <0-100>}}
+You MUST respond with ONLY a JSON object (no explanation, no markdown):
+{{"dept": "<department name exactly as listed above>", "confidence": <0.0 to 1.0>}}
 
 Rules:
-- confidence is 0-100 (how sure you are)
-- Pick the SINGLE best department
-- If unsure, pick the closest match with lower confidence
-- Only output the JSON object, no explanation"""
-
-
-async def suggest_department(subject: str, description: str) -> Optional[dict]:
-    """Call LLM to suggest the best department for a ticket."""
-    if not settings.OPENROUTER_API_KEY:
-        return None
-
-    dept_list = "\n".join(f"- {d['name']} ({d['code']})" for d in DEPARTMENTS)
-    system_msg = SYSTEM_PROMPT.format(departments=dept_list)
-    user_msg = f"Subject: {subject}\n\nDescription: {description}"
-
-    try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            response = await client.post(
-                settings.OPENROUTER_URL,
-                headers={
-                    "Authorization": f"Bearer {settings.OPENROUTER_API_KEY}",
-                    "Content-Type": "application/json",
-                    "HTTP-Referer": "https://tickets.12.jugaar.ai",
-                },
-                json={
-                    "model": settings.OPENROUTER_MODEL,
-                    "messages": [
-                        {"role": "system", "content": system_msg},
-                        {"role": "user", "content": user_msg},
-                    ],
-                    "temperature": 0.1,
-                    "max_tokens": 100,
-                },
-            )
-
-            if response.status_code == 200:
-                data = response.json()
-                content = data["choices"][0]["message"]["content"].strip()
-                # Parse JSON from response
-                if content.startswith("{"):
-                    result = json.loads(content)
-                    return {
-                        "dept": result.get("dept", ""),
-                        "confidence": min(100, max(0, int(result.get("confidence", 50)))),
-                    }
-    except Exception:
-        pass
-
-    return None
+- confidence reflects how certain you are (1.0 = certain, 0.5 = guess)
+- Pick the single most relevant department
+- If truly ambiguous, pick the closest and lower confidence
+- Do NOT explain. Output ONLY the JSON object."""
 
 
 def keyword_fallback(subject: str, description: str) -> list[dict]:
-    """Simple keyword-based fallback when LLM is unavailable."""
+    """Keyword-based fallback when AI is unavailable."""
     text = f"{subject} {description}".lower()
-    dept_keywords = {
-        "Transport Department": ["road", "pothole", "traffic", "accident", "vehicle", "highway", "bridge"],
-        "Health Department": ["hospital", "doctor", "health", "medical", "medicine", "patient", "clinic"],
-        "Education Department": ["school", "university", "education", "student", "admission", "college", "exam"],
-        "Police Department": ["theft", "crime", "police", "stolen", "robbery", "murder", "assault"],
-        "Revenue Department": ["land", "property", "revenue", "tax", "inteqal", "registration"],
-        "Works & Services": ["water", "building", "construction", "sewerage", "electricity", "road repair"],
-        "Excise & Taxation": ["vehicle registration", "permit", "excise", "tax", "license"],
-        "Social Welfare Department": ["welfare", "social", "poverty", "relief", "disability"],
-        "Information Department": ["IT", "internet", "computer", "software", "system", "website"],
-        "Agriculture Department": ["crop", "farm", "agriculture", "irrigation", "pesticide", "livestock"],
-    }
+    scores = {}
+    for dept, keywords in DEPT_KEYWORDS.items():
+        matched = [kw for kw in keywords if kw in text]
+        if matched:
+            score = min(len(matched) * 0.15 + 0.1, 1.0)
+            scores[dept] = {"dept": dept, "score": round(score, 2), "keywords": matched}
 
-    results = []
-    for dept, keywords in dept_keywords.items():
-        matches = [kw for kw in keywords if kw in text]
-        if matches:
-            score = len(matches) / len(keywords)
-            results.append({"dept": dept, "confidence": min(100, max(10, int(score * 100))), "keywords": matches})
+    results = sorted(scores.values(), key=lambda x: x["score"], reverse=True)
 
-    results.sort(key=lambda x: x["confidence"], reverse=True)
+    # Convert to unified format
+    for r in results:
+        r["confidence"] = int(r["score"] * 100)
+        del r["score"]
+
     return results[:3]
+
+
+async def suggest_department(subject: str, description: str) -> Optional[dict]:
+    """Use Groq via langchain-groq to classify the ticket into a department.
+
+    Returns {"dept": "...", "confidence": 85} or None if AI is unavailable.
+    Falls back to keyword matching if the API call fails.
+    """
+    api_key = os.environ.get("GROQ_API_KEY", "")
+    if not api_key:
+        logger.info("No GROQ_API_KEY set, falling back to keyword matching")
+        return None
+
+    try:
+        from langchain_groq import ChatGroq
+        from langchain_core.messages import HumanMessage, SystemMessage
+
+        llm = ChatGroq(
+            groq_api_key=api_key,
+            model_name="llama-3.1-8b-instant",
+            temperature=0.0,
+            max_tokens=200,
+        )
+
+        dept_list = "\n".join(f"- {d}" for d in DEPARTMENTS)
+        system_msg = SYSTEM_PROMPT.format(departments=dept_list)
+        user_msg = f"Subject: {subject}\n\nDescription: {description}"
+
+        messages = [
+            SystemMessage(content=system_msg),
+            HumanMessage(content=user_msg),
+        ]
+
+        response = llm.invoke(messages)
+        raw = response.content.strip()
+
+        # Try to extract JSON from the response
+        # Handle markdown code blocks
+        json_match = re.search(r'\{[^}]+\}', raw)
+        if json_match:
+            data = json.loads(json_match.group())
+        else:
+            data = json.loads(raw)
+
+        dept = data.get("dept", "")
+        confidence = data.get("confidence", 0.5)
+
+        # Validate department name
+        if dept not in DEPARTMENTS:
+            # Try fuzzy match
+            for valid_dept in DEPARTMENTS:
+                if valid_dept.lower() in dept.lower() or dept.lower() in valid_dept.lower():
+                    dept = valid_dept
+                    break
+            else:
+                logger.warning(f"AI returned unknown department: {dept}")
+                return None
+
+        # Convert 0-1 confidence to percentage
+        if isinstance(confidence, float) and confidence <= 1.0:
+            confidence = int(confidence * 100)
+
+        return {"dept": dept, "confidence": min(confidence, 100)}
+
+    except Exception as e:
+        logger.error(f"AI suggestion failed: {e}")
+        return None

@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     OPENROUTER_API_KEY: str = ""
     OPENROUTER_MODEL: str = "meta-llama/llama-3.1-8b-instruct:free"
     OPENROUTER_URL: str = "https://openrouter.ai/api/v1/chat/completions"
+    GROQ_API_KEY: str = ""
     UPLOAD_DIR: str = "./uploads"
     MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024  # 10MB
     RATE_LIMIT_LOGIN: str = "5/minute"
