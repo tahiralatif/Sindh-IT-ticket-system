@@ -410,16 +410,16 @@ VALID_DEPARTMENTS = [
 
 async def _resolve_dept_id(db: AsyncSession, dept_name: str) -> Optional[int]:
     """Find department ID by name (exact or fuzzy match)."""
+    # First try exact match
     result = await db.execute(select(Department.id, Department.name).where(Department.name == dept_name))
     row = result.first()
     if row:
         return row[0]
-    for valid in VALID_DEPARTMENTS:
-        if dept_name.lower() in valid.lower() or valid.lower() in dept_name.lower():
-            result = await db.execute(select(Department.id).where(Department.name == valid))
-            row = result.first()
-            if row:
-                return row[0]
+    # Then try fuzzy match against all valid departments
+    all_depts = (await db.execute(select(Department.id, Department.name))).all()
+    for did, dname in all_depts:
+        if dept_name.lower() in dname.lower() or dname.lower() in dept_name.lower():
+            return did
     return None
 
 
@@ -463,7 +463,9 @@ async def _execute_write_action(action: dict, db: AsyncSession) -> dict:
             return {"success": False, "message": f"❌ Ticket {ticket_num} not found."}
         dept_id = await _resolve_dept_id(db, dept_name)
         if not dept_id:
-            return {"success": False, "message": f"❌ Department '{dept_name}' not found. Valid: {', '.join(VALID_DEPARTMENTS)}"}
+            all_depts = (await db.execute(select(Department.name))).all()
+            valid_list = [r[0] for r in all_depts]
+            return {"success": False, "message": f"❌ Department '{dept_name}' not found. Valid: {', '.join(valid_list)}"}
         await db.execute(
             text("UPDATE tickets SET assigned_to_dept = :dept, status = 'assigned' WHERE id = :tid"),
             {"dept": dept_id, "tid": ticket_id}
@@ -566,7 +568,67 @@ async def admin_chat(user_id: int, message: str, history: list[dict], db: AsyncS
     # Save user message to database
     await save_chat_message(db, user_id, "user", message)
 
-    # Check if this is a confirmation of a pending write action
+    # Dynamically fetch valid departments from database
+    dept_result = await db.execute(select(Department.name).order_by(Department.name))
+    valid_depts = [r[0] for r in dept_result.all()]
+    depts_str = ", ".join(valid_depts) if valid_depts else "(none configured)"
+
+    # Build dynamic admin system prompt with real department names
+    admin_system = f"""You are an AI assistant for the Government of Sindh IT Ticket System admin.
+
+You can perform TWO types of actions:
+
+## 1. READ — when admin wants to VIEW data
+Output a query JSON:
+  {{"action": "query", "query": "count_by_status"}}
+  {{"action": "query", "query": "count_by_department"}}
+  {{"action": "query", "query": "count_by_priority"}}
+  {{"action": "query", "query": "count_by_city"}}
+  {{"action": "query", "query": "count_by_service"}}
+  {{"action": "query", "query": "today_summary"}}
+  {{"action": "query", "query": "resolution_stats"}}
+  {{"action": "query", "query": "department_tickets", "department": "<name>"}}
+  {{"action": "query", "query": "status_tickets", "status": "<status>"}}
+  {{"action": "query", "query": "recent_tickets", "limit": 10}}
+  {{"action": "query", "query": "overdue_tickets"}}
+  {{"action": "query", "query": "search_tickets", "q": "<term>"}}
+  {{"action": "query", "query": "ticket_detail", "ticket_number": "<SIT-...>"}}
+
+## 2. WRITE — when admin wants to MODIFY data
+Output an action JSON:
+  {{"action": "assign_ticket", "ticket_number": "SIT-...", "department": "<exact name>"}}
+  {{"action": "change_status", "ticket_number": "SIT-...", "status": "in_progress"}}
+  {{"action": "bulk_assign", "filter": {{"status": "submitted"}}, "department": "<exact name>"}}
+  {{"action": "bulk_status", "filter": {{"status": "submitted"}}, "new_status": "in_progress"}}
+
+Valid statuses: submitted, assigned, in_progress, resolved, closed
+
+## VALID DEPARTMENTS (use ONLY these exact names — do NOT invent new ones):
+{depts_str}
+
+## SERVICE-TO-DEPARTMENT MAPPING:
+- Water Supply → Works & Services
+- Road Repair → Works & Services
+- Electricity → Works & Services
+- Sanitation → Works & Services
+- Healthcare/Hospital → Health Department
+- School/Education → Education Department
+- Police/Law Enforcement → Police Department
+- Property Tax/Revenue → Revenue Department
+- Vehicle/Driving License → Excise & Taxation
+- Social Services → Social Welfare Department
+- Government IT/Digital → Information Department
+- Agriculture/Farming → Agriculture Department
+- Public Transport → Transport Department
+
+## RULES:
+- NEVER answer with made-up numbers. Use only the database data provided.
+- When unsure, ask for clarification.
+- For write actions, always include the exact ticket number or clear filter.
+- ALWAYS use valid department names from the list above. NEVER make up department names.
+- Reply concisely. Use bullet points for lists.
+- Reply in the same language the user writes in.
+"""
     msg_lower = message.strip().lower()
     if msg_lower in ("yes", "confirm", "y", "do it", "proceed", "ok", "go ahead"):
         for msg in reversed(history):
@@ -599,7 +661,7 @@ async def admin_chat(user_id: int, message: str, history: list[dict], db: AsyncS
     messages_text += f"Admin: {message}\n"
 
     # Let the AI decide: query or write action?
-    response = await _groq_chat(ADMIN_SYSTEM, messages_text)
+    response = await _groq_chat(admin_system, messages_text)
     if not response:
         reply = "I'm having trouble connecting to the AI service. Please try again."
         await save_chat_message(db, user_id, "assistant", reply)
@@ -630,7 +692,9 @@ async def admin_chat(user_id: int, message: str, history: list[dict], db: AsyncS
                 dept = action.get("department", "")
                 dept_id = await _resolve_dept_id(db, dept)
                 if not dept_id:
-                    return {"reply": f"❌ Department '{dept}' not found. Valid: {', '.join(VALID_DEPARTMENTS)}"}
+                    all_depts = (await db.execute(select(Department.name))).all()
+                    valid_list = [r[0] for r in all_depts]
+                    return {"reply": f"❌ Department '{dept}' not found. Valid: {', '.join(valid_list)}"}
 
             # For bulk actions, show confirmation with count
             if action["action"] in ("bulk_assign", "bulk_status"):
