@@ -180,6 +180,35 @@
 .chat-send:hover { background: var(--primary-dark, #004d26); }
 .chat-send:disabled { background: #9ca3af; cursor: not-allowed; }
 
+/* Confirm/Cancel action buttons */
+.chat-confirm-row {
+    display: flex;
+    gap: 8px;
+    align-self: flex-end;
+    margin-top: 4px;
+}
+.chat-btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    transition: background 0.2s, transform 0.1s;
+}
+.chat-btn:hover { transform: scale(1.05); }
+.chat-btn-confirm {
+    background: var(--success, #059669);
+    color: #fff;
+}
+.chat-btn-confirm:hover { background: #047857; }
+.chat-btn-cancel {
+    background: var(--danger, #dc2626);
+    color: #fff;
+}
+.chat-btn-cancel:hover { background: #b91c1c; }
+
 /* Mobile responsive */
 @media (max-width: 600px) {
     .chat-panel {

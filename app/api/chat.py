@@ -1,7 +1,7 @@
-"""AI Chatbot — citizen ticket filing + admin database query assistant.
+"""AI Chatbot — citizen ticket filing + admin database assistant with write actions.
 
 Citizen mode: conversational ticket creation using Groq.
-Admin mode: read-only database queries using Groq for intent parsing.
+Admin mode: read + write actions (assign, status change, bulk ops).
 """
 import json
 import re
@@ -9,7 +9,7 @@ import logging
 from datetime import datetime, date
 from typing import Optional
 
-from sqlalchemy import select, func, and_, or_
+from sqlalchemy import select, func, and_, or_, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -32,7 +32,7 @@ async def _groq_chat(system_prompt: str, user_message: str) -> Optional[str]:
             groq_api_key=api_key,
             model_name="llama-3.1-8b-instant",
             temperature=0.0,
-            max_tokens=500,
+            max_tokens=800,
         )
         resp = llm.invoke([SystemMessage(content=system_prompt), HumanMessage(content=user_message)])
         return resp.content.strip()
@@ -87,7 +87,6 @@ CITIZEN_WELCOME = "Assalam o Alaikum! Welcome to the Sindh Government Ticket Sys
 
 async def citizen_chat(user_id: int, message: str, history: list[dict], db: AsyncSession) -> dict:
     """Handle citizen chat. Returns {"reply": str, "action": optional dict}."""
-    # Build conversation history for Groq
     messages_text = ""
     for msg in history:
         role = "Assistant" if msg["role"] == "assistant" else "Citizen"
@@ -98,23 +97,19 @@ async def citizen_chat(user_id: int, message: str, history: list[dict], db: Asyn
     if not response:
         return {"reply": "I'm having trouble connecting to the AI service. Please try again or use the submit form directly."}
 
-    # Check if AI wants to submit
     json_match = re.search(r'\{"action"\s*:\s*"submit"[^}]+\}', response)
     if json_match:
         try:
             action_data = json.loads(json_match.group())
-            # Actually create the ticket
             subject = action_data.get("subject", "")
             description = action_data.get("description", "")
             city = action_data.get("city", "")
             service_name = action_data.get("service_name", "")
 
-            # Get AI department suggestion
             ai_result = await suggest_department(subject, description)
             ai_dept = ai_result["dept"] if ai_result else None
             ai_conf = ai_result.get("confidence", 0) if ai_result else None
 
-            # Find the department ID
             dept_id = None
             if ai_dept:
                 dept_result = await db.execute(
@@ -144,7 +139,6 @@ async def citizen_chat(user_id: int, message: str, history: list[dict], db: Asyn
             await db.commit()
             await db.refresh(ticket)
 
-            # Build confirmation message
             reply = (
                 f"✅ Your ticket has been filed successfully!\n\n"
                 f"📋 **Ticket Number:** {ticket.ticket_number}\n"
@@ -160,51 +154,54 @@ async def citizen_chat(user_id: int, message: str, history: list[dict], db: Asyn
             logger.error(f"Ticket submission from chat failed: {e}")
             return {"reply": "Sorry, there was an error filing your ticket. Please try using the submit form."}
 
-    # Return the AI's conversational reply (strip any accidental JSON)
     clean_reply = re.sub(r'\{[^}]*"action"[^}]*\}', '', response).strip()
     return {"reply": clean_reply or response}
 
 
 # ═══════════════════════════════════════════════════════════════════
-#  ADMIN MODE
+#  ADMIN MODE — Read + Write
 # ═══════════════════════════════════════════════════════════════════
 
-ADMIN_SYSTEM = """You are an internal query assistant for the Government of Sindh IT Ticket System admin.
+ADMIN_SYSTEM = """You are an AI assistant for the Government of Sindh IT Ticket System admin.
 
-You have access to the ticket database. You can answer questions about:
-- Total tickets, pending tickets, resolved tickets
-- Tickets by department, status, priority, city
-- Tickets submitted today or in a date range
-- Ticket resolution rates and average resolution time
-- Lists of recent or overdue tickets
+You can perform TWO types of actions:
 
-RULES:
-- NEVER modify, create, or delete any data. You are READ-ONLY.
-- NEVER answer with made-up numbers. You MUST use the provided database data.
-- When the user asks a question, output EXACTLY a JSON query object on its own line.
-  The JSON must be one of these formats:
+## 1. READ — when admin wants to VIEW data
+Output a query JSON:
+  {"action": "query", "query": "count_by_status"}
+  {"action": "query", "query": "count_by_department"}
+  {"action": "query", "query": "count_by_priority"}
+  {"action": "query", "query": "count_by_city"}
+  {"action": "query", "query": "count_by_service"}
+  {"action": "query", "query": "today_summary"}
+  {"action": "query", "query": "resolution_stats"}
+  {"action": "query", "query": "department_tickets", "department": "<name>"}
+  {"action": "query", "query": "status_tickets", "status": "<status>"}
+  {"action": "query", "query": "recent_tickets", "limit": 10}
+  {"action": "query", "query": "overdue_tickets"}
+  {"action": "query", "query": "search_tickets", "q": "<term>"}
+  {"action": "query", "query": "ticket_detail", "ticket_number": "<SIT-...>"}
 
-  {"query": "count_by_status"}
-  {"query": "count_by_department"}
-  {"query": "count_by_priority"}
-  {"query": "count_by_city"}
-  {"query": "count_by_service"}
-  {"query": "today_summary"}
-  {"query": "resolution_stats"}
-  {"query": "department_tickets", "department": "<name>"}
-  {"query": "status_tickets", "status": "<status>"}
-  {"query": "recent_tickets", "limit": 10}
-  {"query": "overdue_tickets"}
-  {"query": "search_tickets", "q": "<search term>"}
-  {"query": "user_stats"}
+## 2. WRITE — when admin wants to MODIFY data
+Output an action JSON:
+  {"action": "assign_ticket", "ticket_number": "SIT-...", "department": "Transport Department"}
+  {"action": "change_status", "ticket_number": "SIT-...", "status": "in_progress"}
+  {"action": "bulk_assign", "filter": {"status": "submitted"}, "department": "Transport Department"}
+  {"action": "bulk_status", "filter": {"status": "submitted"}, "new_status": "in_progress"}
 
-- After receiving database data, format a clear, readable answer.
-- Use bullet points and tables for clarity.
-- Keep answers concise but complete.
+Valid statuses: submitted, assigned, in_progress, resolved, closed
+Valid departments: Health Department, Education Department, Transport Department, Revenue Department, Police Department, Excise & Taxation, Social Welfare Department, Information Department, Works & Services, Agriculture Department
+
+## RULES:
+- NEVER answer with made-up numbers. Use only the database data provided.
+- When unsure, ask for clarification.
+- For write actions, always include the exact ticket number or clear filter.
+- Reply concisely. Use bullet points for lists.
 - Reply in the same language the user writes in.
 """
 
-# Query templates for building SQL
+# ─── Read query templates ─────────────────────────────────────────
+
 QUERY_TEMPLATES = {
     "count_by_status": "SELECT status, COUNT(*) FROM tickets GROUP BY status",
     "count_by_department": """SELECT d.name, COUNT(t.id) FROM departments d
@@ -219,7 +216,7 @@ QUERY_TEMPLATES = {
 
 
 async def _execute_query(query_key: str, params: dict = None) -> dict:
-    """Execute a predefined query and return formatted results."""
+    """Execute a predefined read query and return results."""
     from app.core.database import async_session
 
     async with async_session() as db:
@@ -228,8 +225,7 @@ async def _execute_query(query_key: str, params: dict = None) -> dict:
         if query_key in QUERY_TEMPLATES:
             result = await db.execute(text(QUERY_TEMPLATES[query_key]))
             rows = result.all()
-            result_data = {"rows": [{"col_" + str(i): v for i, v in enumerate(r)} for r in rows],
-                           "raw": [list(r) for r in rows]}
+            result_data = {"raw": [list(r) for r in rows]}
 
         elif query_key == "today_summary":
             today = date.today().isoformat()
@@ -302,7 +298,6 @@ async def _execute_query(query_key: str, params: dict = None) -> dict:
             result_data = {"tickets": [{"number": r[0], "subject": r[1], "status": r[2], "priority": r[3], "date": str(r[4])} for r in result.all()]}
 
         elif query_key == "overdue_tickets":
-            # Tickets in "submitted" status for more than 7 days
             from datetime import timedelta
             cutoff = datetime.utcnow() - timedelta(days=7)
             result = await db.execute(
@@ -322,59 +317,320 @@ async def _execute_query(query_key: str, params: dict = None) -> dict:
             )
             result_data = {"tickets": [{"number": r[0], "subject": r[1], "status": r[2], "priority": r[3]} for r in result.all()]}
 
+        elif query_key == "ticket_detail":
+            tn = params.get("ticket_number", "") if params else ""
+            result = await db.execute(
+                select(Ticket, User.full_name, Department.name)
+                .join(User, Ticket.submitted_by == User.id, isouter=True)
+                .join(Department, Ticket.assigned_to_dept == Department.id, isouter=True)
+                .where(Ticket.ticket_number == tn)
+            )
+            row = result.first()
+            if row:
+                t, submitter, dept = row
+                result_data = {
+                    "ticket_number": t.ticket_number,
+                    "subject": t.subject,
+                    "description": t.description,
+                    "status": t.status,
+                    "priority": t.priority,
+                    "department": dept or "Unassigned",
+                    "city": t.city or "Not specified",
+                    "service_name": t.service_name or "Not specified",
+                    "submitted_by": submitter,
+                    "created_at": str(t.created_at),
+                }
+            else:
+                result_data = {"error": f"Ticket {tn} not found"}
+
         return result_data
 
 
-from sqlalchemy import text
+# ─── Write action helpers ─────────────────────────────────────────
 
+VALID_STATUSES = ["submitted", "assigned", "in_progress", "resolved", "closed"]
+VALID_DEPARTMENTS = [
+    "Health Department", "Education Department", "Transport Department",
+    "Revenue Department", "Police Department", "Excise & Taxation",
+    "Social Welfare Department", "Information Department",
+    "Works & Services", "Agriculture Department",
+]
+
+
+async def _resolve_dept_id(db: AsyncSession, dept_name: str) -> Optional[int]:
+    """Find department ID by name (exact or fuzzy match)."""
+    result = await db.execute(select(Department.id, Department.name).where(Department.name == dept_name))
+    row = result.first()
+    if row:
+        return row[0]
+    for valid in VALID_DEPARTMENTS:
+        if dept_name.lower() in valid.lower() or valid.lower() in dept_name.lower():
+            result = await db.execute(select(Department.id).where(Department.name == valid))
+            row = result.first()
+            if row:
+                return row[0]
+    return None
+
+
+async def _resolve_ticket_id(db: AsyncSession, ticket_number: str) -> Optional[int]:
+    """Find ticket ID by ticket number."""
+    result = await db.execute(select(Ticket.id).where(Ticket.ticket_number == ticket_number))
+    row = result.first()
+    return row[0] if row else None
+
+
+async def _find_matching_tickets(db: AsyncSession, filt: dict) -> list[int]:
+    """Find ticket IDs matching filter criteria for bulk operations."""
+    query = select(Ticket.id)
+    conditions = []
+    if filt.get("status"):
+        conditions.append(Ticket.status == filt["status"])
+    if filt.get("city"):
+        conditions.append(Ticket.city.contains(filt["city"]))
+    if filt.get("department"):
+        query = query.join(Department, Ticket.assigned_to_dept == Department.id, isouter=True)
+        conditions.append(Department.name.contains(filt["department"]))
+    if filt.get("service_name"):
+        conditions.append(Ticket.service_name.contains(filt["service_name"]))
+    if filt.get("priority"):
+        conditions.append(Ticket.priority == filt["priority"])
+    if conditions:
+        query = query.where(and_(*conditions))
+    result = await db.execute(query)
+    return [r[0] for r in result.all()]
+
+
+async def _execute_write_action(action: dict, db: AsyncSession) -> dict:
+    """Execute a confirmed write action."""
+    action_type = action.get("action")
+
+    if action_type == "assign_ticket":
+        ticket_num = action.get("ticket_number", "")
+        dept_name = action.get("department", "")
+        ticket_id = await _resolve_ticket_id(db, ticket_num)
+        if not ticket_id:
+            return {"success": False, "message": f"❌ Ticket {ticket_num} not found."}
+        dept_id = await _resolve_dept_id(db, dept_name)
+        if not dept_id:
+            return {"success": False, "message": f"❌ Department '{dept_name}' not found. Valid: {', '.join(VALID_DEPARTMENTS)}"}
+        await db.execute(
+            text("UPDATE tickets SET assigned_to_dept = :dept, status = 'assigned' WHERE id = :tid"),
+            {"dept": dept_id, "tid": ticket_id}
+        )
+        await db.commit()
+        return {"success": True, "message": f"✅ Ticket **{ticket_num}** assigned to **{dept_name}**."}
+
+    elif action_type == "change_status":
+        ticket_num = action.get("ticket_number", "")
+        new_status = action.get("status", "")
+        if new_status not in VALID_STATUSES:
+            return {"success": False, "message": f"❌ Invalid status '{new_status}'. Valid: {', '.join(VALID_STATUSES)}"}
+        ticket_id = await _resolve_ticket_id(db, ticket_num)
+        if not ticket_id:
+            return {"success": False, "message": f"❌ Ticket {ticket_num} not found."}
+        update_fields = {"status": new_status}
+        if new_status in ("resolved", "closed"):
+            update_fields["resolved_at"] = datetime.utcnow().isoformat()
+        set_clause = ", ".join(f"{k} = :{k}" for k in update_fields)
+        await db.execute(
+            text(f"UPDATE tickets SET {set_clause} WHERE id = :tid"),
+            {**update_fields, "tid": ticket_id}
+        )
+        await db.commit()
+        return {"success": True, "message": f"✅ Ticket **{ticket_num}** status changed to **{new_status}**."}
+
+    elif action_type == "bulk_assign":
+        filt = action.get("filter", {})
+        dept_name = action.get("department", "")
+        dept_id = await _resolve_dept_id(db, dept_name)
+        if not dept_id:
+            return {"success": False, "message": f"❌ Department '{dept_name}' not found."}
+        ticket_ids = await _find_matching_tickets(db, filt)
+        if not ticket_ids:
+            return {"success": False, "message": "❌ No tickets matched the filter criteria."}
+        placeholders = ", ".join([f":t{i}" for i in range(len(ticket_ids))])
+        params = {f"t{i}": tid for i, tid in enumerate(ticket_ids)}
+        params["dept"] = dept_id
+        await db.execute(
+            text(f"UPDATE tickets SET assigned_to_dept = :dept, status = 'assigned' WHERE id IN ({placeholders})"),
+            params
+        )
+        await db.commit()
+        return {"success": True, "message": f"✅ **{len(ticket_ids)} ticket(s)** assigned to **{dept_name}**."}
+
+    elif action_type == "bulk_status":
+        filt = action.get("filter", {})
+        new_status = action.get("new_status", "")
+        if new_status not in VALID_STATUSES:
+            return {"success": False, "message": f"❌ Invalid status '{new_status}'."}
+        ticket_ids = await _find_matching_tickets(db, filt)
+        if not ticket_ids:
+            return {"success": False, "message": "❌ No tickets matched the filter criteria."}
+        placeholders = ", ".join([f":t{i}" for i in range(len(ticket_ids))])
+        params = {f"t{i}": tid for i, tid in enumerate(ticket_ids)}
+        params["status"] = new_status
+        extra = ""
+        if new_status in ("resolved", "closed"):
+            extra = ", resolved_at = :resolved"
+            params["resolved"] = datetime.utcnow().isoformat()
+        await db.execute(
+            text(f"UPDATE tickets SET status = :status{extra} WHERE id IN ({placeholders})"),
+            params
+        )
+        await db.commit()
+        return {"success": True, "message": f"✅ **{len(ticket_ids)} ticket(s)** status changed to **{new_status}**."}
+
+    return {"success": False, "message": f"❌ Unknown action: {action_type}"}
+
+
+# ─── Pending action markers (hidden from user) ────────────────────
+
+_PENDING_OPEN = "{_PENDING_ACTION_:"
+_PENDING_CLOSE = "}"
+
+
+def _describe_action(action: dict) -> str:
+    """Human-readable description of a write action."""
+    a = action["action"]
+    filt = action.get("filter", {})
+    if a == "bulk_assign":
+        dept = action.get("department", "?")
+        criteria = ", ".join(f"{k}={v}" for k, v in filt.items())
+        return f"**Assign** all tickets ({criteria}) → **{dept}**"
+    elif a == "bulk_status":
+        ns = action.get("new_status", "?")
+        criteria = ", ".join(f"{k}={v}" for k, v in filt.items())
+        return f"**Change status** of all tickets ({criteria}) → **{ns}**"
+    elif a == "assign_ticket":
+        return f"**Assign** {action.get('ticket_number', '?')} → {action.get('department', '?')}"
+    elif a == "change_status":
+        return f"**Change** {action.get('ticket_number', '?')} → {action.get('status', '?')}"
+    return str(action)
+
+
+# ─── Admin chat handler ───────────────────────────────────────────
 
 async def admin_chat(user_id: int, message: str, history: list[dict], db: AsyncSession) -> dict:
-    """Handle admin chat. Returns {"reply": str}."""
-    # Build conversation history
+    """Handle admin chat. Supports read queries AND write actions."""
+
+    # Check if this is a confirmation of a pending write action
+    msg_lower = message.strip().lower()
+    if msg_lower in ("yes", "confirm", "y", "do it", "proceed", "ok", "go ahead"):
+        for msg in reversed(history):
+            if msg["role"] == "assistant":
+                action_match = re.search(r'\{_PENDING_ACTION_:(.+)\}', msg["content"])
+                if action_match:
+                    try:
+                        action = json.loads(action_match.group(1))
+                        result = await _execute_write_action(action, db)
+                        return {"reply": result["message"]}
+                    except Exception as e:
+                        logger.error(f"Write action failed: {e}")
+                        return {"reply": f"❌ Action failed: {str(e)}"}
+                break
+
+    if msg_lower in ("no", "cancel", "n", "nevermind", "never mind", "abort"):
+        return {"reply": "OK, action cancelled. What else can I help you with?"}
+
+    # Build conversation history for Groq
     messages_text = ""
     for msg in history:
         role = "Admin" if msg["role"] == "user" else "Assistant"
-        messages_text += f"{role}: {msg['content']}\n"
+        # Strip pending action markers from history
+        clean = re.sub(r'\{_PENDING_ACTION_:.+?\}', '', msg["content"])
+        messages_text += f"{role}: {clean}\n"
     messages_text += f"Admin: {message}\n"
 
-    # First, let the AI generate a query
+    # Let the AI decide: query or write action?
     response = await _groq_chat(ADMIN_SYSTEM, messages_text)
     if not response:
         return {"reply": "I'm having trouble connecting to the AI service. Please try again."}
 
-    # Try to extract query JSON
-    json_match = re.search(r'\{"query"\s*:\s*"[^"]+"[^}]*\}', response)
-    if json_match:
+    # ── Try to extract a WRITE action ──
+    action_match = re.search(r'\{"action"\s*:\s*"(assign_ticket|change_status|bulk_assign|bulk_status)".*\}', response)
+    if action_match:
         try:
-            query_obj = json.loads(json_match.group())
-            query_key = query_obj.get("query", "")
-            query_params = {k: v for k, v in query_obj.items() if k != "query"}
+            action = json.loads(action_match.group())
 
-            # Execute the actual database query
+            # Validate
+            if action["action"] in ("assign_ticket", "change_status"):
+                tn = action.get("ticket_number", "")
+                if not tn:
+                    return {"reply": "Which ticket number? Please provide the ticket number (e.g., SIT-20260714-0001)."}
+                # Verify ticket exists
+                tid = await _resolve_ticket_id(db, tn)
+                if not tid:
+                    return {"reply": f"❌ Ticket {tn} not found. Please check the ticket number."}
+
+            if action["action"] in ("change_status", "bulk_status"):
+                ns = action.get("status") or action.get("new_status", "")
+                if ns not in VALID_STATUSES:
+                    return {"reply": f"❌ Invalid status. Valid options: {', '.join(VALID_STATUSES)}"}
+
+            if action["action"] in ("assign_ticket", "bulk_assign"):
+                dept = action.get("department", "")
+                dept_id = await _resolve_dept_id(db, dept)
+                if not dept_id:
+                    return {"reply": f"❌ Department '{dept}' not found. Valid: {', '.join(VALID_DEPARTMENTS)}"}
+
+            # For bulk actions, show confirmation with count
+            if action["action"] in ("bulk_assign", "bulk_status"):
+                preview = await _find_matching_tickets(db, action.get("filter", {}))
+                count = len(preview)
+                if count == 0:
+                    return {"reply": "No tickets match the specified filter. Nothing to do."}
+                desc = _describe_action(action)
+                reply = (
+                    f"⚠️ **Bulk Action Preview:**\n\n"
+                    f"{desc}\n\n"
+                    f"**This will affect {count} ticket(s).**\n\n"
+                    f"Type **confirm** to proceed or **cancel** to abort."
+                )
+                # Hide the action JSON from user but store it for confirmation
+                return {"reply": reply, "_pending_action": action}
+
+            # Single-ticket actions: execute immediately
+            result = await _execute_write_action(action, db)
+            return {"reply": result["message"]}
+
+        except json.JSONDecodeError:
+            pass
+        except Exception as e:
+            logger.error(f"Write action error: {e}")
+            return {"reply": f"❌ Error: {str(e)}"}
+
+    # ── Try to extract a READ query ──
+    query_match = re.search(r'\{"action"\s*:\s*"query"\s*,\s*"query"\s*:\s*"([^"]+)"(.*)\}', response)
+    if query_match:
+        try:
+            query_key = query_match.group(1)
+            extra_str = query_match.group(2).strip()
+            query_params = {}
+            if extra_str:
+                for kv_match in re.finditer(r'"(\w+)"\s*:\s*"([^"]+)"', extra_str):
+                    query_params[kv_match.group(1)] = kv_match.group(2)
+
             result_data = await _execute_query(query_key, query_params)
 
-            # Now send the query results back to the AI for formatting
-            data_prompt = f"""The admin asked: "{message}"
-
-I executed this query: {query_key} {json.dumps(query_params) if query_params else ''}
-
-Here are the raw results from the database:
-{json.dumps(result_data, indent=2, default=str)}
-
-Format this into a clear, readable answer for the admin. Use bullet points, numbers, and short sentences. Do NOT make up any numbers — only use what's in the results above."""
-
+            data_prompt = (
+                f'The admin asked: "{message}"\n\n'
+                f"I executed this query: {query_key} {json.dumps(query_params) if query_params else ''}\n\n"
+                f"Here are the raw results from the database:\n"
+                f"{json.dumps(result_data, indent=2, default=str)}\n\n"
+                f"Format this into a clear, readable answer. Use bullet points, numbers, and short sentences. "
+                f"Do NOT make up any numbers — only use what's in the results above."
+            )
             formatted = await _groq_chat(
                 "You are a data formatting assistant. Format the given database results into a clear, readable answer. Use the exact numbers from the data. Do not hallucinate.",
                 data_prompt
             )
-
             return {"reply": formatted or f"Query result: {json.dumps(result_data, indent=2, default=str)}"}
 
         except Exception as e:
-            logger.error(f"Admin chat query failed: {e}")
-            return {"reply": f"I encountered an error processing that query. Please try rephrasing."}
+            logger.error(f"Admin query failed: {e}")
+            return {"reply": "I encountered an error processing that query. Please try rephrasing."}
 
-    # AI gave a direct answer without a query (e.g., greeting)
+    # AI gave a direct conversational answer
     return {"reply": response}
 
 

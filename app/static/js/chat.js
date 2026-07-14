@@ -1,14 +1,14 @@
 /* ═══════════════════════════════════════════════════════════════════
-   Chat Widget JS — Conversational AI assistant
+   Chat Widget JS — Conversational AI assistant with write actions
    ═══════════════════════════════════════════════════════════════════ */
 (function () {
     'use strict';
 
     let chatHistory = [];
     let isOpen = false;
+    let pendingAction = null;  // Stores pending write action for confirmation
 
     function init() {
-        // Inject chat HTML
         const wrapper = document.createElement('div');
         wrapper.id = 'chat-widget';
         wrapper.innerHTML = `
@@ -41,21 +41,18 @@
         `;
         document.body.appendChild(wrapper);
 
-        // Inject CSS
         const link = document.createElement('link');
         link.rel = 'stylesheet';
         link.href = '/static/css/chat.css';
         document.head.appendChild(link);
 
-        // Toggle open/close
         document.getElementById('chat-toggle').addEventListener('click', toggle);
 
-        // Set role-specific title
         const titleEl = document.getElementById('chat-title');
         const subtitleEl = document.getElementById('chat-subtitle');
         if (typeof IS_ADMIN !== 'undefined' && IS_ADMIN) {
             titleEl.textContent = 'Admin Assistant';
-            subtitleEl.textContent = 'Database Query Helper';
+            subtitleEl.textContent = 'Query & Manage Tickets';
         } else {
             titleEl.textContent = 'Ticket Filing Assistant';
             subtitleEl.textContent = 'Government of Sindh';
@@ -64,14 +61,9 @@
 
     function toggle() {
         isOpen = !isOpen;
-        const panel = document.getElementById('chat-panel');
-        const fab = document.getElementById('chat-toggle');
-        panel.classList.toggle('open', isOpen);
-        fab.classList.toggle('active', isOpen);
-
-        if (isOpen && chatHistory.length === 0) {
-            loadWelcome();
-        }
+        document.getElementById('chat-panel').classList.toggle('open', isOpen);
+        document.getElementById('chat-toggle').classList.toggle('active', isOpen);
+        if (isOpen && chatHistory.length === 0) loadWelcome();
     }
 
     async function loadWelcome() {
@@ -92,23 +84,37 @@
         const typingEl = document.getElementById('chat-typing');
         const msg = document.createElement('div');
         msg.className = `chat-msg ${role}`;
-        // Simple markdown-like bold
+        // Markdown-like bold
         text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-        text = text.replace(/\*(.+?)\*/g, '<strong>$1</strong>');
         msg.innerHTML = text;
         container.insertBefore(msg, typingEl);
         container.scrollTop = container.scrollHeight;
+        return msg;
     }
 
     function showTyping() {
-        const typing = document.getElementById('chat-typing');
-        typing.classList.add('show');
-        const container = document.getElementById('chat-messages');
-        container.scrollTop = container.scrollHeight;
+        document.getElementById('chat-typing').classList.add('show');
+        document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
     }
 
     function hideTyping() {
         document.getElementById('chat-typing').classList.remove('show');
+    }
+
+    function showConfirmButtons(msgEl) {
+        const btnRow = document.createElement('div');
+        btnRow.className = 'chat-confirm-row';
+        btnRow.innerHTML = `
+            <button class="chat-btn chat-btn-confirm" onclick="window.ChatWidget.confirmAction()">✅ Confirm</button>
+            <button class="chat-btn chat-btn-cancel" onclick="window.ChatWidget.cancelAction()">❌ Cancel</button>
+        `;
+        msgEl.parentNode.insertBefore(btnRow, msgEl.nextSibling);
+        document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
+    }
+
+    function removeConfirmButtons() {
+        const rows = document.querySelectorAll('.chat-confirm-row');
+        rows.forEach(r => r.remove());
     }
 
     async function send() {
@@ -118,10 +124,10 @@
 
         input.value = '';
         input.style.height = 'auto';
+        removeConfirmButtons();
         addMessage(text, 'user');
         chatHistory.push({ role: 'user', content: text });
 
-        // Disable input while waiting
         const sendBtn = document.getElementById('chat-send');
         input.disabled = true;
         sendBtn.disabled = true;
@@ -132,18 +138,21 @@
             formData.append('message', text);
             formData.append('history_json', JSON.stringify(chatHistory.slice(0, -1)));
 
-            const resp = await fetch('/api/chat', {
-                method: 'POST',
-                body: formData,
-            });
+            const resp = await fetch('/api/chat', { method: 'POST', body: formData });
             const data = await resp.json();
 
             hideTyping();
             if (data.reply) {
-                addMessage(data.reply, 'bot');
+                const msgEl = addMessage(data.reply, 'bot');
                 chatHistory.push({ role: 'assistant', content: data.reply });
+
+                // Check if this response has a pending action
+                if (data._pending_action) {
+                    pendingAction = data._pending_action;
+                    showConfirmButtons(msgEl);
+                }
             } else if (data.error) {
-                addMessage('Sorry, an error occurred: ' + data.error, 'bot');
+                addMessage('Error: ' + data.error, 'bot');
             }
         } catch (e) {
             hideTyping();
@@ -155,7 +164,51 @@
         input.focus();
     }
 
-    // Auto-resize textarea
+    async function confirmAction() {
+        if (!pendingAction) return;
+        removeConfirmButtons();
+        addMessage('confirm', 'user');
+        chatHistory.push({ role: 'user', content: 'confirm' });
+
+        const sendBtn = document.getElementById('chat-send');
+        const input = document.getElementById('chat-input');
+        input.disabled = true;
+        sendBtn.disabled = true;
+        showTyping();
+
+        try {
+            const formData = new FormData();
+            formData.append('message', 'confirm');
+            formData.append('history_json', JSON.stringify(chatHistory.slice(0, -1)));
+
+            const resp = await fetch('/api/chat', { method: 'POST', body: formData });
+            const data = await resp.json();
+
+            hideTyping();
+            if (data.reply) {
+                addMessage(data.reply, 'bot');
+                chatHistory.push({ role: 'assistant', content: data.reply });
+            }
+        } catch (e) {
+            hideTyping();
+            addMessage('Action failed. Please try again.', 'bot');
+        }
+
+        pendingAction = null;
+        input.disabled = false;
+        sendBtn.disabled = false;
+    }
+
+    function cancelAction() {
+        removeConfirmButtons();
+        pendingAction = null;
+        addMessage('cancel', 'user');
+        chatHistory.push({ role: 'user', content: 'cancel' });
+        addMessage('OK, action cancelled. What else can I help you with?', 'bot');
+        chatHistory.push({ role: 'assistant', content: 'OK, action cancelled. What else can I help you with?' });
+        document.getElementById('chat-input').focus();
+    }
+
     function autoResize() {
         const input = document.getElementById('chat-input');
         if (input) {
@@ -164,17 +217,13 @@
         }
     }
 
-    // Init on DOM ready
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
         init();
     }
 
-    // Public API
-    window.ChatWidget = { send, toggle };
-
-    // Auto-resize listener
+    window.ChatWidget = { send, toggle, confirmAction, cancelAction };
     document.addEventListener('input', function (e) {
         if (e.target && e.target.id === 'chat-input') autoResize();
     });
