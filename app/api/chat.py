@@ -568,7 +568,11 @@ async def admin_chat(user_id: int, message: str, history: list[dict], db: AsyncS
     # Save user message to database
     await save_chat_message(db, user_id, "user", message)
 
-    # Dynamically fetch valid departments from database
+    # Check if this is an auto-assign request ("related/correct/right department")
+    auto_assign_keywords = ["related department", "correct department", "right department", "appropriate department", "proper department"]
+    is_auto_assign = any(kw in message.lower() for kw in auto_assign_keywords)
+
+    # Check if this is a confirmation of a pending write action
     dept_result = await db.execute(select(Department.name).order_by(Department.name))
     valid_depts = [r[0] for r in dept_result.all()]
     depts_str = ", ".join(valid_depts) if valid_depts else "(none configured)"
@@ -611,15 +615,33 @@ Valid statuses: submitted, assigned, in_progress, resolved, closed
 - Road Repair → Works & Services
 - Electricity → Works & Services
 - Sanitation → Works & Services
+- Street Light → Works & Services
+- Gas Supply → Works & Services
+- Gas Loadshedding → Works & Services
 - Healthcare/Hospital → Health Department
+- Vaccination → Health Department
 - School/Education → Education Department
+- Teacher Attendance → Education Department
 - Police/Law Enforcement → Police Department
+- Emergency Response → Police Department
 - Property Tax/Revenue → Revenue Department
+- Building Violation → Revenue Department
 - Vehicle/Driving License → Excise & Taxation
 - Social Services → Social Welfare Department
+- Salary Disbursement → Social Welfare Department
 - Government IT/Digital → Information Department
+- Internet Infrastructure → Information Department
 - Agriculture/Farming → Agriculture Department
 - Public Transport → Transport Department
+
+## IMPORTANT: AUTO-ASSIGN FLOW
+When the user says "assign to the related department" or "assign to correct department" or "assign to the right department":
+1. FIRST query ticket_detail to get the service_name
+2. THEN use the SERVICE-TO-DEPARTMENT MAPPING above to pick the department
+3. THEN output the assign_ticket action with that department
+Example: "assign SIT-20260714-0018 to the related department"
+→ Query ticket_detail for SIT-20260714-0018 → service_name: "Water Supply" → mapping says Works & Services → output: {{"action": "assign_ticket", "ticket_number": "SIT-20260714-0018", "department": "Works & Services"}}
+NEVER ask the user for the department when they say "related" or "correct" — you must look it up yourself.
 
 ## NATURAL LANGUAGE → STATUS MAPPING:
 - "in progress", "working on it", "started", "begin" → status: "in_progress"
@@ -760,6 +782,72 @@ Valid statuses: submitted, assigned, in_progress, resolved, closed
                 data_prompt
             )
             final_reply = formatted or f"Query result: {json.dumps(result_data, indent=2, default=str)}"
+
+            # AUTO-ASSIGN: If this was a ticket_detail query during auto-assign request
+            if is_auto_assign and query_key == "ticket_detail" and result_data.get("ticket_number"):
+                service = (result_data.get("service_name") or "").lower()
+                subject = (result_data.get("subject") or "").lower()
+                desc = (result_data.get("description") or "").lower()
+                ticket_number = result_data.get("ticket_number", "")
+
+                # Service-to-department mapping
+                svc_map = {
+                    "water supply": "Works & Services",
+                    "road repair": "Works & Services",
+                    "electricity": "Works & Services",
+                    "sanitation": "Works & Services",
+                    "street light": "Works & Services",
+                    "gas supply": "Works & Services",
+                    "gas loadshedding": "Works & Services",
+                    "sui gas": "Works & Services",
+                    "gas": "Works & Services",
+                    "healthcare": "Health Department",
+                    "hospital": "Health Department",
+                    "vaccination": "Health Department",
+                    "school": "Education Department",
+                    "education": "Education Department",
+                    "teacher": "Education Department",
+                    "police": "Police Department",
+                    "fire": "Police Department",
+                    "emergency": "Police Department",
+                    "revenue": "Revenue Department",
+                    "property tax": "Revenue Department",
+                    "building": "Revenue Department",
+                    "vehicle": "Excise & Taxation",
+                    "driving license": "Excise & Taxation",
+                    "social": "Social Welfare Department",
+                    "salary": "Social Welfare Department",
+                    "it": "Information Department",
+                    "internet": "Information Department",
+                    "agriculture": "Agriculture Department",
+                    "farming": "Agriculture Department",
+                    "transport": "Transport Department",
+                }
+
+                matched_dept = None
+                for keyword, dept in svc_map.items():
+                    if keyword in service or keyword in subject or keyword in desc:
+                        matched_dept = dept
+                        break
+
+                # Default fallback
+                if not matched_dept:
+                    matched_dept = "Works & Services"
+
+                # Execute assignment
+                dept_id = await _resolve_dept_id(db, matched_dept)
+                if dept_id:
+                    tid = await _resolve_ticket_id(db, ticket_number)
+                    if tid:
+                        await db.execute(
+                            text("UPDATE tickets SET assigned_to_dept=:dept, status='assigned', updated_at=CURRENT_TIMESTAMP WHERE id=:id"),
+                            {"dept": dept_id, "id": tid}
+                        )
+                        await db.commit()
+                        final_reply += f"\n\n✅ Auto-assigned to **{matched_dept}** based on the service type."
+                        await save_chat_message(db, user_id, "assistant", final_reply)
+                        return {"reply": final_reply}
+
             await save_chat_message(db, user_id, "assistant", final_reply)
             return {"reply": final_reply}
 
