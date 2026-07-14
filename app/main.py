@@ -42,9 +42,36 @@ DEPARTMENTS = [
     ("Agriculture Department", "AGRI"),
 ]
 
-# ─── App Setup ───────────────────────────────────────────────────
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+
+# ─── Startup ─────────────────────────────────────────────────────
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await init_db()
+    async with async_session() as db:
+        # Seed departments if empty
+        result = await db.execute(select(func.count(Department.id)))
+        if result.scalar() == 0:
+            for name, code in DEPARTMENTS:
+                db.add(Department(name=name, code=code))
+            await db.commit()
+
+        # Seed admin user if empty
+        result = await db.execute(select(func.count(User.id)))
+        if result.scalar() == 0:
+            admin = User(
+                username="admin",
+                password_hash=hash_password("[REDACTED]"),
+                full_name="Sindh IT Minister Office",
+                role="admin",
+            )
+            db.add(admin)
+            await db.commit()
+    yield
+
+
+# ─── App Setup ───────────────────────────────────────────────────
 app = FastAPI(title=settings.APP_NAME, version=settings.APP_VERSION, lifespan=lifespan)
 app.state.limiter = limiter
 app.add_middleware(CSRFMiddleware)
@@ -101,44 +128,15 @@ async def create_notification(db: AsyncSession, user_id: int, title: str, messag
     await db.commit()
 
 
-def sidebar_context(request: Request, db_stats: dict = None):
-    user = get_user(request)
-    return {
-        "user_name": "Guest",
-        "user_role": "",
-        "unread_count": 0,
-        "is_admin": False,
-        **(db_stats or {}),
-    }
-
-
-# ─── Startup ─────────────────────────────────────────────────────
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    await init_db()
-    async with async_session() as db:
-        # Seed departments if empty
-        result = await db.execute(select(func.count(Department.id)))
-        if result.scalar() == 0:
-            for name, code in DEPARTMENTS:
-                db.add(Department(name=name, code=code))
-            await db.commit()
-
-        # Seed admin user if empty
-        result = await db.execute(select(func.count(User.id)))
-        if result.scalar() == 0:
-            admin = User(
-                username="admin",
-                password_hash=hash_password("[REDACTED]"),
-                full_name="Sindh IT Minister Office",
-                role="admin",
-            )
-            db.add(admin)
-            await db.commit()
-    yield
-
-
-
+# ─── CSRF Validation Helper ──────────────────────────────────────
+def require_csrf(request: Request, csrf_token: str = Form(None)):
+    """Validate CSRF token for form submissions. Raises 403 if invalid."""
+    session_token = request.cookies.get("session", "")
+    if session_token and csrf_token:
+        if not validate_csrf_token(session_token, csrf_token):
+            raise HTTPException(status_code=403, detail="CSRF token invalid")
+    elif session_token and not csrf_token:
+        raise HTTPException(status_code=403, detail="CSRF token missing")
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -330,8 +328,10 @@ async def submit_ticket(
     description: str = Form(...),
     category: str = Form("general"),
     priority: str = Form("medium"),
+    csrf_token: str = Form(None),
     db: AsyncSession = Depends(get_db),
 ):
+    require_csrf(request, csrf_token)
     user = get_user(request)
     if not user:
         return RedirectResponse(url="/login", status_code=303)
@@ -452,8 +452,10 @@ async def ticket_update(
     assigned_user: int = Form(None),
     priority: str = Form(None),
     note: str = Form(""),
+    csrf_token: str = Form(None),
     db: AsyncSession = Depends(get_db),
 ):
+    require_csrf(request, csrf_token)
     user = get_user(request)
     if not user:
         return RedirectResponse(url="/login", status_code=303)
@@ -614,8 +616,10 @@ async def admin_create_user(
     phone: str = Form(""),
     role: str = Form("citizen"),
     department_id: int = Form(None),
+    csrf_token: str = Form(None),
     db: AsyncSession = Depends(get_db),
 ):
+    require_csrf(request, csrf_token)
     user = get_user(request)
     if not user or user["role"] != "admin":
         return RedirectResponse(url="/login", status_code=303)

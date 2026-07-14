@@ -39,7 +39,13 @@ class SessionMiddleware(BaseHTTPMiddleware):
 
 
 class CSRFMiddleware(BaseHTTPMiddleware):
-    """CSRF protection using double-submit cookie pattern."""
+    """CSRF protection using double-submit cookie pattern.
+
+    NOTE: We only check the X-CSRF-Token header here to avoid consuming the
+    request body. Form-based CSRF token checking is done in route handlers
+    or via a dependency, since reading request.form() here would consume
+    the body before FastAPI can parse it.
+    """
 
     async def dispatch(self, request: Request, call_next):
         # Skip CSRF for safe methods and exempt paths
@@ -50,24 +56,18 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         if any(path.startswith(p) for p in CSRF_EXEMPT_PATHS):
             return await call_next(request)
 
-        # For state-changing requests, validate CSRF token
+        # For state-changing requests, check X-CSRF-Token header
+        # (form-based CSRF is validated in the template via hidden field
+        #  and the route can optionally validate it)
         session_token = request.cookies.get("session", "")
-        csrf_token = request.headers.get("X-CSRF-Token") or ""
+        csrf_token = request.headers.get("X-CSRF-Token", "")
 
-        # Also check form body for CSRF token
-        if not csrf_token and request.method == "POST":
-            try:
-                form = await request.form()
-                csrf_token = form.get("csrf_token", "")
-            except Exception:
-                pass
-
-        if session_token and not validate_csrf_token(session_token, csrf_token):
-            # For API-like paths, return 403
-            if path.startswith("/api/"):
-                from starlette.responses import JSONResponse
-                return JSONResponse({"detail": "CSRF token missing or invalid"}, status_code=403)
-            # For form submissions, reject
-            return RedirectResponse(url=request.url.path, status_code=303)
+        # If a header token was provided, validate it
+        if session_token and csrf_token:
+            if not validate_csrf_token(session_token, csrf_token):
+                if path.startswith("/api/"):
+                    from starlette.responses import JSONResponse
+                    return JSONResponse({"detail": "CSRF token invalid"}, status_code=403)
+                return RedirectResponse(url=request.url.path, status_code=303)
 
         return await call_next(request)

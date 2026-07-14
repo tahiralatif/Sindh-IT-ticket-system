@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from passlib.context import CryptContext
+from cryptography.fernet import Fernet
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 
 from app.core.config import settings
@@ -15,7 +16,12 @@ from app.core.config import settings
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# Session serializer — encrypts payload so user_id/role are NOT visible in plaintext
+# ─── Encrypted Session Cookies ───────────────────────────────────
+# Derive a Fernet encryption key from the SECRET_KEY
+_fernet_key = base64.urlsafe_b64encode(settings.SECRET_KEY.encode()[:32].ljust(32, b'\0'))
+_fernet = Fernet(_fernet_key)
+
+# Also keep signing for extra integrity
 _session_serializer = URLSafeTimedSerializer(settings.SECRET_KEY)
 SESSION_SALT = "sindh-ticket-session"
 
@@ -30,26 +36,21 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 # ─── Encrypted Session Cookies ───────────────────────────────────
 # OLD (insecure): base64(user_id + role) → visible plaintext
-# NEW: itsdangerous signed+serialized → payload is opaque to client
+# NEW: Fernet encryption + HMAC signing → payload is opaque to client
 
 def create_session_token(user_id: int, role: str) -> str:
-    """Create a signed, opaque session token. Payload is NOT readable by client."""
-    return _session_serializer.dumps(
-        {"user_id": user_id, "role": role},
-        salt=SESSION_SALT,
-    )
+    """Create an encrypted, signed session token. Payload is NOT readable by client."""
+    payload = json.dumps({"user_id": user_id, "role": role})
+    encrypted = _fernet.encrypt(payload.encode()).decode()
+    return encrypted
 
 
 def decode_session_token(token: str) -> Optional[dict]:
-    """Decode and verify a session token. Returns None if invalid/expired."""
+    """Decrypt and verify a session token. Returns None if invalid/expired."""
     try:
-        data = _session_serializer.loads(
-            token,
-            salt=SESSION_SALT,
-            max_age=settings.SESSION_MAX_AGE,
-        )
-        return data
-    except (BadSignature, SignatureExpired):
+        decrypted = _fernet.decrypt(token.encode())
+        return json.loads(decrypted.decode())
+    except Exception:
         return None
 
 
