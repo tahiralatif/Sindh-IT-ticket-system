@@ -3,11 +3,12 @@
 Single classification call: ticket text in → department + confidence out.
 Keyword fallback if the API call fails.
 """
-import os
 import json
 import re
 import logging
 from typing import Optional
+
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +81,7 @@ async def suggest_department(subject: str, description: str) -> Optional[dict]:
     Returns {"dept": "...", "confidence": 85} or None if AI is unavailable.
     Falls back to keyword matching if the API call fails.
     """
-    api_key = os.environ.get("GROQ_API_KEY", "")
+    api_key = settings.GROQ_API_KEY
     if not api_key:
         logger.info("No GROQ_API_KEY set, falling back to keyword matching")
         return None
