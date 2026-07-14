@@ -1,42 +1,40 @@
-# 🇵🇰 Sindh IT Ticket System
+# 🇵🇰 Sindh IT Minister Portal
 
 > **Live:** [sindh-it-ticket.14.jugaar.ai](https://sindh-it-ticket.14.jugaar.ai)
 
-## Ye Kya Hai?
+A smart ticket management system where citizens submit complaints, and the IT Minister reviews all tickets, sees which department they belong to, and assigns or moves them forward with a single click.
 
-Ye ek **government complaint management system** hai — Sindh Government ke liye banaya gaya hai. Citizens apni complaints (tickets) submit karte hain, aur system **AI ki madad se automatically** decide karta hai kaunsa department handle karega.
-
-**Simple mein:** Citizen complaint kare → AI department assign kare → Admin manage kare → Problem solve ho.
+The built-in AI assistant reads every ticket, understands the issue, automatically suggests the correct department, and enables the minister to manage tickets using simple chat commands — making the entire process faster and more efficient.
 
 ---
 
-## 🎯 System Kaise Kaam Karta Hai
+## How It Works
 
-### Step 1: Citizen Complaint Submit Karta Hai
-Citizen apna complaint fill karta hai:
-- **Subject:** Problem ka title (e.g., "Pothole on Shahrah-e-Faisal")
-- **Description:** Detail mein problem explain karta hai
-- **Category:** Complaint, Request, ya Emergency
+### Step 1: Citizen Submits a Complaint
+Citizen fills out a complaint form with:
+- **Subject:** Title of the problem (e.g., "Pothole on Shahrah-e-Faisal")
+- **Description:** Detailed explanation of the issue
+- **Category:** Complaint, Request, or Emergency
 - **Priority:** Low, Medium, High, Critical
 - **City:** Karachi, Hyderabad, Sukkur, Larkana, etc.
 - **Service:** Road Repair, Water Supply, Electricity, etc.
 
-### Step 2: AI Automatically Department Assign Karta Hai 🤖
-Jab citizen subject aur description likhta hai, **Groq AI (Llama 3.1 model)** automatically:
+### Step 2: AI Automatically Assigns a Department
+When a citizen submits a complaint, **Groq AI (LLaMA 3.1 model)** automatically:
 
-1. Complaint ko samajhta hai
-2. 10 departments mein se sahi wala choose karta hai
-3. **Confidence score** deta hai (kitna sure hai — 0% se 100%)
+1. Understands the complaint
+2. Chooses the correct department out of 10 available departments
+3. Provides a **confidence score** (how sure it is — 0% to 100%)
 
 **Example:**
 ```
-Citizen likha: "Pothole on Shahrah-e-Faisal near Bahadurabad"
-AI ne decide kiya: Transport Department (Confidence: 95%)
+Citizen wrote: "Pothole on Shahrah-e-Faisal near Bahadurabad"
+AI decided: Transport Department (Confidence: 95%)
 ```
 
-**10 Departments jo AI handle karta hai:**
-| Department | Kya Handle Karta Hai |
-|------------|---------------------|
+**10 Departments the AI handles:**
+| Department | Handles |
+|------------|---------|
 | Health Department | Hospitals, vaccinations, health issues |
 | Education Department | Schools, teachers, education |
 | Transport Department | Roads, potholes, traffic, transport |
@@ -48,61 +46,58 @@ AI ne decide kiya: Transport Department (Confidence: 95%)
 | Works & Services | Water, electricity, sanitation, street lights |
 | Agriculture Department | Farming, agriculture |
 
-**Agar AI ko confidence kam lagta hai** (kam than 60%), to system keyword matching use karta hai as backup — phir bhi ticket assign hota hai.
+If the AI confidence is low (below 60%), the system falls back to keyword matching as a backup — the ticket still gets assigned.
 
-### Step 3: Admin Ticket Manage Karta Hai
-Admin dashboard pe sab tickets dikhte hain. Wo:
-- Tickets ko departments mein assign kar sakta hai
-- Status change kar sakta hai (Submitted → Assigned → In Progress → Resolved)
-- Filters use kar sakta hai (city, department, status, search)
-- Analytics dekh sakta hai
+### Step 3: Minister Manages the Ticket
+The minister sees all tickets on the admin dashboard and can:
+- Assign tickets to departments
+- Change status (Submitted → Assigned → In Progress → Resolved)
+- Use filters (city, department, status, search)
+- View analytics and reports
 
 ---
 
-## 🤖 Admin Chatbot — Ye Sabse Powerful Feature Hai
+## AI Chatbot for the Minister
 
-Admin ke liye ek **AI chatbot** hai jo almost sab kuch kar sakta hai. Ye sirf read-only nahi hai — ye **database mein changes bhi kar sakta hai**.
+A powerful **AI chatbot** is built in for the minister that can do almost everything — it is not read-only, it can **make changes in the database**.
 
-### Chatbot Kya Kya Kar Sakta Hai:
+### Read Queries (Viewing Data)
+The minister can ask:
+- **"How many tickets are pending?"** → Shows real data
+- **"How many tickets in Health Department?"** → Department-wise count
+- **"How many tickets came today?"** → Today's summary
+- **"How many tickets from Karachi?"** → City-wise filter
+- **"Show me ticket SIT-20260714-0004"** → Full ticket info
+- **"Any overdue tickets?"** → Escalated tickets
+- **"What is the resolution time?"** → Average days to resolve
 
-#### 📊 Read Queries (Data Dekhna)
-Admin puch sakta hai:
-- **"Kitne tickets pending hain?"** → Real data dikhata hai
-- **"Health Department mein kitne tickets hain?"** → Department-wise count
-- **"Aaj kitne tickets aaye?"** → Today's summary
-- **"Karachi se kitne tickets hain?"** → City-wise filter
-- **"SIT-20260714-0004 ki detail dikhao"** → Full ticket info
-- **"Koi overdue tickets hain?"** → Escalated tickets
-- **"Resolution time kya hai?"** → Average days to resolve
+### Write Actions (Making Changes in the Database)
+**Single Ticket Actions** (executed immediately):
+- **"Assign ticket 4 to Transport Department"** → Ticket gets assigned
+- **"Change ticket 5 status to resolved"** → Status changes
 
-#### ✏️ Write Actions (Database Mein Changes)
-**Single Ticket Actions** (instant execute hota hai):
-- **"Assign ticket 4 to Transport Department"** → Ticket assign ho jata hai
-- **"Change ticket 5 status to resolved"** → Status change ho jata hai
-
-**Bulk Actions** (confirmation mangta hai):
-- **"Saare submitted tickets ko Transport mein assign karo"**
-  - Bot pehle dikhata hai: "Ye 3 tickets affect hongi. Confirm karein?"
-  - Admin "confirm" bole → Sab tickets assign ho jaate hain
-  - Admin "cancel" bole → Kuch nahi hota
+**Bulk Actions** (requires confirmation):
+- **"Assign all submitted tickets to Transport Department"**
+  - Bot shows preview: "This will affect 3 tickets. Confirm?"
+  - Minister says "confirm" → All tickets get assigned
+  - Minister says "cancel" → Nothing happens
 
 **Valid Statuses:** submitted, assigned, in_progress, resolved, closed
 
-### Chatbot Example Conversations:
-
+### Example Conversations:
 ```
-Admin: How many tickets are pending?
+Minister: How many tickets are pending?
 Bot: There are 6 tickets with status "submitted" waiting for assignment.
 
-Admin: Assign ticket 4 to Transport Department
+Minister: Assign ticket 4 to Transport Department
 Bot: ✅ Ticket SIT-20260714-0004 assigned to Transport Department.
 
-Admin: Move all submitted Karachi tickets to Works & Services
+Minister: Move all submitted Karachi tickets to Works & Services
 Bot: This will affect 4 tickets. Type "confirm" to proceed.
-Admin: confirm
+Minister: confirm
 Bot: ✅ 4 tickets assigned to Works & Services Department.
 
-Admin: Show me ticket SIT-20260714-0009
+Minister: Show me ticket SIT-20260714-0009
 Bot: 📋 Ticket SIT-20260714-0009
      Subject: Fire broke out in Sukkur market area
      Status: assigned
@@ -113,20 +108,20 @@ Bot: 📋 Ticket SIT-20260714-0009
 
 ---
 
-## 👥 Citizen Chatbot
+## Citizen Chatbot
 
-Citizens ke liye bhi ek chatbot hai jo **complaint file karne mein help** karta hai.
+Citizens also have a chatbot that **helps file complaints** through conversation.
 
-**Ye kaise kaam karta hai:**
-1. Citizen bole: "I want to file a complaint"
-2. Bot poochta hai: "Kya problem hai?"
-3. Citizen describe karta hai
+**How it works:**
+1. Citizen says: "I want to file a complaint"
+2. Bot asks: "What is the problem?"
+3. Citizen describes the issue
 4. Bot automatically:
-   - Subject suggest karta hai
-   - City detect karta hai
-   - Department suggest karta hai (AI se)
-   - Ticket create karta hai
-   - Ticket number deta hai (e.g., SIT-20260714-0005)
+   - Suggests a subject
+   - Detects the city
+   - Suggests a department (using AI)
+   - Creates the ticket
+   - Returns a ticket number (e.g., SIT-20260714-0005)
 
 **Example:**
 ```
@@ -141,37 +136,37 @@ Bot: I'll file this for you.
 
 ---
 
-## 📊 Analytics Dashboard
+## Analytics Dashboard
 
-Admin ko charts aur graphs dikhte hain:
-- **Status Distribution:** Kitne tickets submitted, assigned, resolved
-- **Priority Breakdown:** Kitne high, medium, low priority
-- **Department-wise:** Har department mein kitne tickets
-- **City-wise:** Har city se kitne tickets
-- **Service-wise:** Har service type ke kitne tickets
-- **Timeline:** Time ke saath tickets ka trend
-- **Resolution Stats:** Average kitne din mein resolve hota hai
-
----
-
-## 🔒 Security Features
-
-- **Encrypted Sessions:** Login cookies Fernet encryption se protected hain
-- **CSRF Protection:** Har form mein CSRF token hota hai
-- **Rate Limiting:** Login pe 5 attempts per minute ka limit
-- **Password Hashing:** bcrypt se passwords encrypted hain
-- **AI Department Routing:** Groq LLM se accurate department assignment
+The minister gets charts and graphs showing:
+- **Status Distribution:** How many tickets are submitted, assigned, resolved
+- **Priority Breakdown:** How many high, medium, low priority tickets
+- **Department-wise:** Tickets per department
+- **City-wise:** Tickets per city
+- **Service-wise:** Tickets per service type
+- **Timeline:** Ticket trend over time
+- **Resolution Stats:** Average days to resolve
 
 ---
 
-## 🛠️ Tech Stack
+## Security Features
+
+- **Encrypted Sessions:** Login cookies protected with Fernet encryption
+- **CSRF Protection:** Every form has a CSRF token
+- **Rate Limiting:** Login limited to 5 attempts per minute
+- **Password Hashing:** Passwords encrypted with bcrypt
+- **AI Department Routing:** Accurate department assignment using Groq LLM
+
+---
+
+## Tech Stack
 
 | Component | Technology |
 |-----------|-----------|
 | Backend | Python FastAPI |
 | Database | SQLite (async) |
 | Templates | Jinja2 (server-side rendering) |
-| AI | Groq API (Llama 3.1 8B Instant) |
+| AI | Groq API (LLaMA 3.1 8B Instant) |
 | Authentication | Fernet encryption + bcrypt |
 | Frontend | HTML/CSS/JS (vanilla) |
 | Charts | Chart.js |
@@ -179,7 +174,7 @@ Admin ko charts aur graphs dikhte hain:
 
 ---
 
-## 🚀 How to Run Locally
+## How to Run Locally
 
 ```bash
 # 1. Clone the repo
@@ -205,25 +200,24 @@ Visit: `http://localhost:8000`
 
 ---
 
-## 📝 Default Accounts
+## Default Accounts
 
-| Role | Username | Password | Kya Kar Sakta Hai |
-|------|----------|----------|-------------------|
-| Admin | admin | SindhIT-ZPEU0008 | Sab kuch — tickets manage, chatbot, analytics |
-| Citizen | fatima_test | demo1234 | Complaint submit, track, chatbot |
-| Citizen | uzairlatif | password123 | Complaint submit, track, chatbot |
+| Role | Username | Password | Capabilities |
+|------|----------|----------|-------------|
+| Admin | admin | SindhIT-ZPEU0008 | Everything — manage tickets, chatbot, analytics |
+| Citizen | fatima_test | demo1234 | Submit complaints, track, chatbot |
+| Citizen | uzairlatif | password123 | Submit complaints, track, chatbot |
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 Sindh-IT-ticket-system/
 ├── app/
 │   ├── main.py              # Main server — routes, logic
 │   ├── api/
-│   │   ├── chat.py          # AI Chatbot logic (citizen + admin)
-│   │   └── chat.py          # Chat endpoints
+│   │   └── chat.py          # AI Chatbot logic (citizen + admin)
 │   ├── ai/
 │   │   └── suggest.py       # AI department suggestion (Groq)
 │   ├── core/
@@ -252,23 +246,24 @@ Sindh-IT-ticket-system/
 
 ---
 
-## 🎯 Key Features Summary
+## Key Features Summary
 
-1. **AI Department Routing** — Complaint automatically sahi department mein jaata hai
-2. **Admin Chatbot** — Natural language mein tickets manage karo
+1. **AI Department Routing** — Complaints automatically go to the correct department
+2. **Minister Chatbot** — Manage tickets using natural language commands
 3. **Citizen Chatbot** — Conversational complaint filing
-4. **Real-time Analytics** — Charts aur graphs se data samjho
-5. **Multi-city Support** — Karachi, Hyderabad, Sukkur, Larkana, etc.
-6. **Priority Management** — Low se lekar Critical tak
-7. **Status Tracking** — Submit se lekar Resolve tak ka full trail
-8. **Responsive Design** — Mobile aur desktop dono pe kaam karta hai
+4. **Real-time Analytics** — Understand data through charts and graphs
+5. **Multi-city Support** — Karachi, Hyderabad, Sukkur, Larkana, and more
+6. **Priority Management** — From Low to Critical
+7. **Status Tracking** — Full trail from Submit to Resolve
+8. **Responsive Design** — Works on mobile and desktop
 9. **Secure** — Encrypted sessions, CSRF protection, rate limiting
-10. **File Attachments** — Complaint ke saath photos/documents attach karo
+10. **File Attachments** — Attach photos/documents with complaints
 
 ---
 
-## 📞 Contact
+## Team
 
-**Tahira Latif** — [GitHub](https://github.com/tahiralatif)
+- **Tahira Latif** — [GitHub](https://github.com/tahiralatif)
+- **Mehwish** — Co-developer
 
 **Live Demo:** [sindh-it-ticket.14.jugaar.ai](https://sindh-it-ticket.14.jugaar.ai)
