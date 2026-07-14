@@ -7,15 +7,15 @@
     <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="/static/css/style.css">
-    
+    <link rel="stylesheet" href="/static/css/chat.css">
 </head>
 <body>
 
-<!-- ═══ Top Bar (matches sindh.gov.pk) ═══ -->
+<!-- ═══ Top Bar ═══ -->
 <div class="top-bar">
     <div class="container">
         <div class="top-bar-left">
-            <a href="http://www.sindh.gov.pk/" target="_blank"><i class="fa fa-home"></i></a>
+            <a href="http://www.sindh.gov.pk/" target="_blank"><i class="fa fa-home"></i> sindh.gov.pk</a>
             <a href="#" title="Facebook"><i class="fab fa-facebook-f"></i></a>
             <a href="#" title="Twitter"><i class="fab fa-twitter"></i></a>
             <a href="#" title="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
@@ -23,9 +23,7 @@
         </div>
         <div class="top-bar-right">
             <a href="/notifications"><i class="fa fa-bell"></i>
-                
-                <span class="notif-badge">4</span>
-                
+                {% if unread_count %}<span class="notif-badge">{{ unread_count }}</span>{% endif %}
             </a>
             <span>|</span>
             <a href="/logout"><i class="fa fa-sign-out-alt"></i> Logout</a>
@@ -43,10 +41,8 @@
                 <small>Government of Sindh — Ticket Management System</small>
             </div>
         </a>
-        <div style="display:flex;align-items:center;gap:16px;">
-            <span style="font-size:13px;color:var(--text-secondary);">
-                <i class="fa fa-user-circle"></i> Sindh IT Minister Office
-            </span>
+        <div class="header-user">
+            <i class="fa fa-user-circle"></i> {{ user_name or 'Guest' }}
         </div>
     </div>
 </header>
@@ -56,15 +52,17 @@
     <div class="container">
         <button class="nav-toggle" onclick="document.querySelector('.nav-list').classList.toggle('open')">☰</button>
         <ul class="nav-list">
-            <li><a href="/" class=""><i class="fa fa-home icon"></i>Home</a></li>
-            
-            
+            <li><a href="/"><i class="fa fa-home icon"></i>Home</a></li>
+            {% if is_admin %}
             <li><a href="/admin/tickets" class="active"><i class="fa fa-ticket-alt icon"></i>All Tickets</a></li>
-            <li><a href="/admin/users" class=""><i class="fa fa-users-cog icon"></i>User Management</a></li>
-            <li><a href="/admin/analytics" class=""><i class="fa fa-chart-bar icon"></i>Analytics</a></li>
-            
-            
-            <li><a href="/notifications" class=""><i class="fa fa-bell icon"></i>Notifications</a></li>
+            <li><a href="/admin/users"><i class="fa fa-users-cog icon"></i>User Management</a></li>
+            <li><a href="/admin/analytics"><i class="fa fa-chart-bar icon"></i>Analytics</a></li>
+            {% endif %}
+            <li><a href="/submit"><i class="fa fa-plus-circle icon"></i>Submit Ticket</a></li>
+            <li><a href="/track"><i class="fa fa-search icon"></i>Track</a></li>
+            <li><a href="/notifications"><i class="fa fa-bell icon"></i>Notifications
+                {% if unread_count %}<span class="notif-badge">{{ unread_count }}</span>{% endif %}
+            </a></li>
         </ul>
     </div>
 </nav>
@@ -76,133 +74,123 @@
             <h3><i class="fa fa-bars"></i> Menu</h3>
         </div>
         <nav class="sidebar-nav">
-            
-            
-            <a href="/" class=""><span class="icon">📊</span> Dashboard</a>
+            <a href="/"><span class="icon">📊</span> Dashboard</a>
+            {% if is_admin %}
             <a href="/admin/tickets" class="active"><span class="icon">🎫</span> All Tickets</a>
-            <a href="/admin/users" class=""><span class="icon">👥</span> User Management</a>
-            <a href="/admin/analytics" class=""><span class="icon">📈</span> Analytics</a>
-            
-            
-            <a href="/notifications" class="">
+            <a href="/admin/users"><span class="icon">👥</span> User Management</a>
+            <a href="/admin/analytics"><span class="icon">📈</span> Analytics</a>
+            {% endif %}
+            <a href="/submit"><span class="icon">📝</span> Submit Ticket</a>
+            <a href="/track"><span class="icon">🔍</span> Track Ticket</a>
+            <a href="/notifications">
                 <span class="icon">🔔</span> Notifications
-                
-                <span class="notif-badge">4</span>
-                
+                {% if unread_count %}<span class="notif-badge">{{ unread_count }}</span>{% endif %}
             </a>
         </nav>
         <div class="sidebar-user">
-            <div class="name">Sindh IT Minister Office</div>
-            <div class="role">admin</div>
-            <a href="/logout" style="color:var(--text-muted);font-size:12px;margin-top:6px;display:inline-block;">Logout →</a>
+            <div class="name">{{ user_name or 'Guest' }}</div>
+            <div class="role">{{ user_role or '' }}</div>
+            <a href="/logout">Logout →</a>
         </div>
     </aside>
+
     <div class="main-content">
-        
-<div class="page-header">
-    <div>
-        <h1>All Tickets</h1>
-        <div class="subtitle">4 tickets total</div>
+        <div class="page-header">
+            <div>
+                <h1><i class="fa fa-ticket-alt"></i> All Tickets</h1>
+                <div class="subtitle">{{ tickets|length }} ticket{{ 's' if tickets|length != 1 }} total</div>
+            </div>
+        </div>
+
+        <!-- ═══ Filter Bar ═══ -->
+        <div class="card">
+            <form class="search-bar" method="get">
+                <input type="text" name="q" placeholder="Search tickets..." value="{{ q or '' }}">
+                <select name="status">
+                    <option value="">All Status</option>
+                    <option value="submitted" {{ 'selected' if status_filter == 'submitted' }}>Submitted</option>
+                    <option value="assigned" {{ 'selected' if status_filter == 'assigned' }}>Assigned</option>
+                    <option value="in_progress" {{ 'selected' if status_filter == 'in_progress' }}>In Progress</option>
+                    <option value="resolved" {{ 'selected' if status_filter == 'resolved' }}>Resolved</option>
+                    <option value="closed" {{ 'selected' if status_filter == 'closed' }}>Closed</option>
+                    <option value="rejected" {{ 'selected' if status_filter == 'rejected' }}>Rejected</option>
+                </select>
+                <select name="department">
+                    <option value="">All Departments</option>
+                    {% for dept in departments %}
+                    <option value="{{ dept.id }}" {{ 'selected' if dept_filter == dept.id|string }}>{{ dept.name }}</option>
+                    {% endfor %}
+                </select>
+                <input type="text" name="service_name" placeholder="Service..." value="{{ service_filter or '' }}"
+                       list="services-list" autocomplete="off">
+                <datalist id="services-list">
+                    {% for s in services %}
+                    <option value="{{ s }}">
+                    {% endfor %}
+                </datalist>
+                <input type="text" name="city" placeholder="City..." value="{{ city_filter or '' }}"
+                       list="cities-list" autocomplete="off">
+                <datalist id="cities-list">
+                    {% for c in cities %}
+                    <option value="{{ c }}">
+                    {% endfor %}
+                </datalist>
+                <button type="submit" class="btn btn-primary btn-sm"><i class="fa fa-filter"></i> Filter</button>
+            </form>
+        </div>
+
+        <!-- ═══ Tickets Table ═══ -->
+        <div class="card">
+            {% if tickets %}
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Ticket</th>
+                            <th>Subject</th>
+                            <th>From</th>
+                            <th>Department</th>
+                            <th>Service</th>
+                            <th>City</th>
+                            <th>Status</th>
+                            <th>Priority</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for t, submitter, dept_name in tickets %}
+                        <tr>
+                            <td><a href="/ticket/{{ t.id }}">{{ t.ticket_number }}</a></td>
+                            <td>{{ t.subject[:50] }}{% if t.subject|length > 50 %}...{% endif %}</td>
+                            <td>{{ submitter }}</td>
+                            <td>
+                                {% if dept_name == 'Unassigned' %}
+                                <span style="color:var(--text-muted)">{{ dept_name }}</span>
+                                {% else %}
+                                {{ dept_name }}
+                                {% endif %}
+                            </td>
+                            <td>{{ t.service_name or '—' }}</td>
+                            <td>{{ t.city or '—' }}</td>
+                            <td><span class="badge badge-{{ t.status }}">{{ t.status|replace('_',' ')|title }}</span></td>
+                            <td><span class="badge badge-{{ t.priority }}">{{ t.priority|title }}</span></td>
+                            <td style="color:var(--text-muted);font-size:13px;white-space:nowrap;">{{ t.created_at.strftime('%Y-%m-%d') }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <div class="icon"><i class="fa fa-search"></i></div>
+                <p>No tickets found matching your filters.</p>
+            </div>
+            {% endif %}
+        </div>
     </div>
 </div>
 
-<div class="card">
-    <form class="search-bar" method="get">
-        <input type="text" name="q" placeholder="Search tickets..." value="">
-        <select name="status">
-            <option value="">All Status</option>
-            <option value="submitted" >Submitted</option>
-            <option value="assigned" >Assigned</option>
-            <option value="in_progress" >In Progress</option>
-            <option value="resolved" >Resolved</option>
-            <option value="closed" >Closed</option>
-            <option value="rejected" >Rejected</option>
-        </select>
-        <select name="dept">
-            <option value="">All Departments</option>
-            
-            <option value="10" >Agriculture Department</option>
-            
-            <option value="2" >Education Department</option>
-            
-            <option value="6" >Excise &amp; Taxation</option>
-            
-            <option value="1" >Health Department</option>
-            
-            <option value="8" >Information Department</option>
-            
-            <option value="5" >Police Department</option>
-            
-            <option value="4" >Revenue Department</option>
-            
-            <option value="7" >Social Welfare</option>
-            
-            <option value="3" >Transport Department</option>
-            
-            <option value="9" >Works &amp; Services</option>
-            
-        </select>
-        <button type="submit" class="btn btn-primary btn-sm">Filter</button>
-    </form>
-
-    
-    <div class="table-wrapper">
-        <table>
-            <thead><tr><th>Ticket</th><th>Subject</th><th>From</th><th>Department</th><th>Status</th><th>Priority</th><th>Date</th></tr></thead>
-            <tbody>
-            
-            <tr>
-                <td><a href="/ticket/4" style="font-family:monospace;font-weight:600;">SIT-20260714-0001</a></td>
-                <td>Water supply broken in Hyderabad</td>
-                <td>Sindh IT Minister Office</td>
-                <td><span style="color:var(--text-muted)">Unassigned</span></td>
-                <td><span class="badge badge-submitted">Submitted</span></td>
-                <td><span class="badge badge-high">High</span></td>
-                <td style="color:var(--text-muted);font-size:13px;">2026-07-14</td>
-            </tr>
-            
-            <tr>
-                <td><a href="/ticket/3" style="font-family:monospace;font-weight:600;">SIT-20260713-0003</a></td>
-                <td>Car theft in Karachi Gulshan</td>
-                <td>Sindh IT Minister Office</td>
-                <td><span style="color:var(--text-muted)">Unassigned</span></td>
-                <td><span class="badge badge-submitted">Submitted</span></td>
-                <td><span class="badge badge-urgent">Urgent</span></td>
-                <td style="color:var(--text-muted);font-size:13px;">2026-07-13</td>
-            </tr>
-            
-            <tr>
-                <td><a href="/ticket/2" style="font-family:monospace;font-weight:600;">SIT-20260713-0002</a></td>
-                <td>University admission system broken</td>
-                <td>Sindh IT Minister Office</td>
-                <td><span style="color:var(--text-muted)">Unassigned</span></td>
-                <td><span class="badge badge-submitted">Submitted</span></td>
-                <td><span class="badge badge-medium">Medium</span></td>
-                <td style="color:var(--text-muted);font-size:13px;">2026-07-13</td>
-            </tr>
-            
-            <tr>
-                <td><a href="/ticket/1" style="font-family:monospace;font-weight:600;">SIT-20260713-0001</a></td>
-                <td>Road pothole on main highway causing acc...</td>
-                <td>Sindh IT Minister Office</td>
-                <td><span style="color:var(--text-muted)">Unassigned</span></td>
-                <td><span class="badge badge-submitted">Submitted</span></td>
-                <td><span class="badge badge-high">High</span></td>
-                <td style="color:var(--text-muted);font-size:13px;">2026-07-13</td>
-            </tr>
-            
-            </tbody>
-        </table>
-    </div>
-
-    
-
-    
-</div>
-
-    </div>
-</div>
-
-
+    <script>var IS_ADMIN = {{ "true" if is_admin else "false" }};</script>
+    <script src="/static/js/chat.js"></script>
 </body>
 </html>

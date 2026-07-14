@@ -52,6 +52,8 @@ class Ticket(Base):
     assigned_to_user = Column(Integer, ForeignKey("users.id"), nullable=True)
     ai_suggested_dept = Column(String(100), nullable=True)
     ai_confidence = Column(Integer, nullable=True)  # 0-100
+    service_name = Column(String(100), nullable=True)
+    city = Column(String(100), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     resolved_at = Column(DateTime, nullable=True)

@@ -1,5 +1,6 @@
 """Sindh IT Ticket System — Main FastAPI Application."""
 import os
+import json
 import uuid
 import asyncio
 from datetime import datetime, timezone
@@ -25,6 +26,7 @@ from app.core.security import (
 )
 from app.middleware.auth import SessionMiddleware, CSRFMiddleware
 from app.ai.suggest import suggest_department, keyword_fallback
+from app.api.chat import handle_chat, CITIZEN_WELCOME
 
 # Rate limiter
 limiter = Limiter(key_func=get_remote_address)
@@ -328,6 +330,8 @@ async def submit_ticket(
     description: str = Form(...),
     category: str = Form("general"),
     priority: str = Form("medium"),
+    service_name: str = Form(""),
+    city: str = Form(""),
     csrf_token: str = Form(None),
     db: AsyncSession = Depends(get_db),
 ):
@@ -362,6 +366,8 @@ async def submit_ticket(
         submitted_by=user["user_id"],
         ai_suggested_dept=ai_dept,
         ai_confidence=ai_confidence,
+        service_name=service_name if service_name else None,
+        city=city if city else None,
     )
     db.add(ticket)
     await db.flush()
@@ -546,6 +552,8 @@ async def admin_tickets(request: Request, db: AsyncSession = Depends(get_db)):
     q = request.query_params.get("q", "")
     status_filter = request.query_params.get("status", "")
     dept_filter = request.query_params.get("department", "")
+    service_filter = request.query_params.get("service_name", "")
+    city_filter = request.query_params.get("city", "")
 
     query = select(Ticket, User.full_name).join(User, Ticket.submitted_by == User.id, isouter=True)
     if q:
@@ -554,6 +562,10 @@ async def admin_tickets(request: Request, db: AsyncSession = Depends(get_db)):
         query = query.where(Ticket.status == status_filter)
     if dept_filter:
         query = query.where(Ticket.assigned_to_dept == int(dept_filter))
+    if service_filter:
+        query = query.where(Ticket.service_name.contains(service_filter))
+    if city_filter:
+        query = query.where(Ticket.city.contains(city_filter))
 
     result = await db.execute(query.order_by(Ticket.created_at.desc()))
     tickets_with_users = []
@@ -568,6 +580,16 @@ async def admin_tickets(request: Request, db: AsyncSession = Depends(get_db)):
     depts = await get_depts(db)
     unread = await get_unread_count(db, user["user_id"])
 
+    # Get distinct cities and service names for filter dropdowns
+    cities_result = await db.execute(
+        select(Ticket.city).where(Ticket.city.isnot(None), Ticket.city != "").distinct()
+    )
+    cities = sorted([r[0] for r in cities_result.all() if r[0]])
+    services_result = await db.execute(
+        select(Ticket.service_name).where(Ticket.service_name.isnot(None), Ticket.service_name != "").distinct()
+    )
+    services = sorted([r[0] for r in services_result.all() if r[0]])
+
     return templates.TemplateResponse("admin_tickets.html", {
         "request": request,
         "user": user,
@@ -580,6 +602,10 @@ async def admin_tickets(request: Request, db: AsyncSession = Depends(get_db)):
         "q": q,
         "status_filter": status_filter,
         "dept_filter": dept_filter,
+        "service_filter": service_filter,
+        "city_filter": city_filter,
+        "cities": cities,
+        "services": services,
     })
 
 
@@ -859,7 +885,7 @@ async def api_analytics_status(db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(Ticket.status, func.count(Ticket.id)).group_by(Ticket.status)
     )
-    return [{"status": r[0], "count": r[1]} for r in result.all()]
+    return {r[0]: r[1] for r in result.all()}
 
 
 @app.get("/api/analytics/categories")
@@ -867,7 +893,7 @@ async def api_analytics_categories(db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(Ticket.category, func.count(Ticket.id)).group_by(Ticket.category)
     )
-    return [{"category": r[0], "count": r[1]} for r in result.all()]
+    return {r[0] or "general": r[1] for r in result.all()}
 
 
 @app.get("/api/analytics/departments")
@@ -877,7 +903,7 @@ async def api_analytics_departments(db: AsyncSession = Depends(get_db)):
         .join(Ticket, Department.id == Ticket.assigned_to_dept, isouter=True)
         .group_by(Department.id)
     )
-    return [{"department": r[0], "count": r[1]} for r in result.all()]
+    return {r[0] or "Unassigned": r[1] for r in result.all()}
 
 
 @app.get("/api/analytics/priority")
@@ -885,7 +911,7 @@ async def api_analytics_priority(db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(Ticket.priority, func.count(Ticket.id)).group_by(Ticket.priority)
     )
-    return [{"priority": r[0], "count": r[1]} for r in result.all()]
+    return {r[0]: r[1] for r in result.all()}
 
 
 @app.get("/api/analytics/over-time")
@@ -896,15 +922,88 @@ async def api_analytics_over_time(db: AsyncSession = Depends(get_db)):
             func.count(Ticket.id),
         ).group_by(func.date(Ticket.created_at)).order_by(func.date(Ticket.created_at))
     )
-    return [{"date": str(r[0]), "count": r[1]} for r in result.all()]
+    return {str(r[0]): r[1] for r in result.all()}
 
 
 @app.get("/api/analytics/resolution")
 async def api_analytics_resolution(db: AsyncSession = Depends(get_db)):
     total = (await db.execute(select(func.count(Ticket.id)))).scalar() or 0
     resolved = (await db.execute(select(func.count(Ticket.id)).where(Ticket.status.in_(["resolved", "closed"])))).scalar() or 0
+    # Calculate avg/min/max resolution time for resolved tickets
+    result = await db.execute(
+        select(
+            func.julianday(Ticket.resolved_at) - func.julianday(Ticket.created_at)
+        ).where(Ticket.resolved_at.isnot(None))
+    )
+    days_list = [r[0] for r in result.all() if r[0] is not None]
+    avg_days = round(sum(days_list) / len(days_list), 1) if days_list else 0
+    min_days = round(min(days_list), 1) if days_list else 0
+    max_days = round(max(days_list), 1) if days_list else 0
     return {
         "total": total,
         "resolved": resolved,
         "rate": round(resolved / total * 100, 1) if total > 0 else 0,
+        "avg_days": avg_days,
+        "min_days": min_days,
+        "max_days": max_days,
     }
+
+
+@app.get("/api/analytics/service")
+async def api_analytics_service(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(Ticket.service_name, func.count(Ticket.id))
+        .where(Ticket.service_name.isnot(None), Ticket.service_name != "")
+        .group_by(Ticket.service_name)
+    )
+    return {r[0]: r[1] for r in result.all()}
+
+
+@app.get("/api/analytics/city")
+async def api_analytics_city(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(Ticket.city, func.count(Ticket.id))
+        .where(Ticket.city.isnot(None), Ticket.city != "")
+        .group_by(Ticket.city)
+    )
+    return {r[0]: r[1] for r in result.all()}
+
+
+# ─── Chatbot API ──────────────────────────────────────────────────
+
+@app.get("/api/chat/welcome")
+async def chat_welcome(request: Request):
+    """Return role-appropriate welcome message."""
+    user = request.state.user
+    if not user:
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+    if user["role"] in ("admin", "department"):
+        return {"reply": "Hello! I'm your admin assistant. I can query the ticket database for you. Try asking:\n• How many tickets are pending?\n• What's the breakdown by department?\n• Show me today's submissions\n• Any overdue tickets?"}
+    else:
+        return {"reply": CITIZEN_WELCOME}
+
+
+@app.post("/api/chat")
+async def chat_endpoint(
+    request: Request,
+    message: str = Form(...),
+    history_json: str = Form("[]"),
+    db: AsyncSession = Depends(get_db),
+):
+    user = request.state.user
+    if not user:
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+
+    try:
+        history = json.loads(history_json)
+    except Exception:
+        history = []
+
+    result = await handle_chat(
+        user_id=user["user_id"],
+        role=user["role"],
+        message=message,
+        history=history,
+        db=db,
+    )
+    return result

@@ -7,15 +7,15 @@
     <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="/static/css/style.css">
-    
+    <link rel="stylesheet" href="/static/css/chat.css">
 </head>
 <body>
 
-<!-- ═══ Top Bar (matches sindh.gov.pk) ═══ -->
+<!-- ═══ Top Bar ═══ -->
 <div class="top-bar">
     <div class="container">
         <div class="top-bar-left">
-            <a href="http://www.sindh.gov.pk/" target="_blank"><i class="fa fa-home"></i></a>
+            <a href="http://www.sindh.gov.pk/" target="_blank"><i class="fa fa-home"></i> sindh.gov.pk</a>
             <a href="#" title="Facebook"><i class="fab fa-facebook-f"></i></a>
             <a href="#" title="Twitter"><i class="fab fa-twitter"></i></a>
             <a href="#" title="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
@@ -23,9 +23,7 @@
         </div>
         <div class="top-bar-right">
             <a href="/notifications"><i class="fa fa-bell"></i>
-                
-                <span class="notif-badge">4</span>
-                
+                {% if unread_count %}<span class="notif-badge">{{ unread_count }}</span>{% endif %}
             </a>
             <span>|</span>
             <a href="/logout"><i class="fa fa-sign-out-alt"></i> Logout</a>
@@ -43,10 +41,8 @@
                 <small>Government of Sindh — Ticket Management System</small>
             </div>
         </a>
-        <div style="display:flex;align-items:center;gap:16px;">
-            <span style="font-size:13px;color:var(--text-secondary);">
-                <i class="fa fa-user-circle"></i> Sindh IT Minister Office
-            </span>
+        <div class="header-user">
+            <i class="fa fa-user-circle"></i> {{ user_name or 'Guest' }}
         </div>
     </div>
 </header>
@@ -56,15 +52,17 @@
     <div class="container">
         <button class="nav-toggle" onclick="document.querySelector('.nav-list').classList.toggle('open')">☰</button>
         <ul class="nav-list">
-            <li><a href="/" class=""><i class="fa fa-home icon"></i>Home</a></li>
-            
-            
-            <li><a href="/admin/tickets" class=""><i class="fa fa-ticket-alt icon"></i>All Tickets</a></li>
-            <li><a href="/admin/users" class=""><i class="fa fa-users-cog icon"></i>User Management</a></li>
-            <li><a href="/admin/analytics" class=""><i class="fa fa-chart-bar icon"></i>Analytics</a></li>
-            
-            
-            <li><a href="/notifications" class="active"><i class="fa fa-bell icon"></i>Notifications</a></li>
+            <li><a href="/"><i class="fa fa-home icon"></i>Home</a></li>
+            {% if is_admin %}
+            <li><a href="/admin/tickets"><i class="fa fa-ticket-alt icon"></i>All Tickets</a></li>
+            <li><a href="/admin/users"><i class="fa fa-users-cog icon"></i>User Management</a></li>
+            <li><a href="/admin/analytics"><i class="fa fa-chart-bar icon"></i>Analytics</a></li>
+            {% endif %}
+            <li><a href="/submit"><i class="fa fa-plus-circle icon"></i>Submit Ticket</a></li>
+            <li><a href="/track"><i class="fa fa-search icon"></i>Track</a></li>
+            <li><a href="/notifications" class="active"><i class="fa fa-bell icon"></i>Notifications
+                {% if unread_count %}<span class="notif-badge">{{ unread_count }}</span>{% endif %}
+            </a></li>
         </ul>
     </div>
 </nav>
@@ -76,137 +74,73 @@
             <h3><i class="fa fa-bars"></i> Menu</h3>
         </div>
         <nav class="sidebar-nav">
-            
-            
-            <a href="/" class=""><span class="icon">📊</span> Dashboard</a>
-            <a href="/admin/tickets" class=""><span class="icon">🎫</span> All Tickets</a>
-            <a href="/admin/users" class=""><span class="icon">👥</span> User Management</a>
-            <a href="/admin/analytics" class=""><span class="icon">📈</span> Analytics</a>
-            
-            
+            <a href="/"><span class="icon">📊</span> Dashboard</a>
+            {% if is_admin %}
+            <a href="/admin/tickets"><span class="icon">🎫</span> All Tickets</a>
+            <a href="/admin/users"><span class="icon">👥</span> User Management</a>
+            <a href="/admin/analytics"><span class="icon">📈</span> Analytics</a>
+            {% endif %}
+            <a href="/submit"><span class="icon">📝</span> Submit Ticket</a>
+            <a href="/track"><span class="icon">🔍</span> Track Ticket</a>
             <a href="/notifications" class="active">
                 <span class="icon">🔔</span> Notifications
-                
-                <span class="notif-badge">4</span>
-                
+                {% if unread_count %}<span class="notif-badge">{{ unread_count }}</span>{% endif %}
             </a>
         </nav>
         <div class="sidebar-user">
-            <div class="name">Sindh IT Minister Office</div>
-            <div class="role">admin</div>
-            <a href="/logout" style="color:var(--text-muted);font-size:12px;margin-top:6px;display:inline-block;">Logout →</a>
+            <div class="name">{{ user_name or 'Guest' }}</div>
+            <div class="role">{{ user_role or '' }}</div>
+            <a href="/logout">Logout →</a>
         </div>
     </aside>
+
     <div class="main-content">
-        
-<div class="page-header">
-    <div>
-        <h1>🔔 Notifications</h1>
-        <div class="subtitle">Your notification history</div>
-    </div>
-    <form method="post" action="/notifications/mark-all-read" style="display:inline;">
-        <button type="submit" class="btn btn-ghost btn-sm">✓ Mark all read</button>
-    </form>
-</div>
-
-<div class="card">
-    
-    
-    <div class="notif-item unread" style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;gap:12px;align-items:start;">
-        <div style="font-size:24px;flex-shrink:0;">ℹ️</div>
-        <div style="flex:1;">
-            <div style="font-weight:600;font-size:14px;margin-bottom:2px;">New Ticket: SIT-20260714-0001</div>
-            <div style="font-size:13px;color:var(--text-secondary);line-height:1.5;white-space:pre-line;">A new ticket has been submitted by Sindh IT Minister Office.
-
-Subject: Water supply broken in Hyderabad
-Suggested Department: Works &amp; Services</div>
-            <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">2026-07-14 06:03</div>
-        </div>
-        <div style="flex-shrink:0;">
-            
-            <form method="post" action="/notifications/mark-read/4" style="display:inline;">
-                <button type="submit" class="btn btn-ghost btn-sm" title="Mark as read">✓</button>
+        <div class="page-header">
+            <div>
+                <h1><i class="fa fa-bell"></i> Notifications</h1>
+                <div class="subtitle">Your notification history</div>
+            </div>
+            <form method="post" action="/notifications/mark-all-read" style="display:inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+                <button type="submit" class="btn btn-ghost btn-sm"><i class="fa fa-check-double"></i> Mark all read</button>
             </form>
-            
         </div>
-    </div>
-    
-    <div class="notif-item unread" style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;gap:12px;align-items:start;">
-        <div style="font-size:24px;flex-shrink:0;">ℹ️</div>
-        <div style="flex:1;">
-            <div style="font-weight:600;font-size:14px;margin-bottom:2px;">New Ticket: SIT-20260713-0003</div>
-            <div style="font-size:13px;color:var(--text-secondary);line-height:1.5;white-space:pre-line;">A new ticket has been submitted by Sindh IT Minister Office.
 
-Subject: Car theft in Karachi Gulshan
-Suggested Department: Police Department</div>
-            <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">2026-07-13 15:37</div>
+        <div class="card">
+            {% if notifications %}
+                {% for n in notifications %}
+                <div class="notif-item {{ 'unread' if not n.is_read }}">
+                    <div class="notif-icon">
+                        <i class="fa fa-{{ 'envelope' if n.ticket_id else 'info-circle' }}"></i>
+                    </div>
+                    <div class="notif-body">
+                        <div class="notif-title">{{ n.title }}</div>
+                        <div class="notif-message">{{ n.message }}</div>
+                        <div class="notif-time">{{ n.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                    </div>
+                    <div style="flex-shrink:0;">
+                        {% if not n.is_read %}
+                        <form method="post" action="/notifications/mark-read/{{ n.id }}" style="display:inline;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+                            <button type="submit" class="btn btn-ghost btn-sm" title="Mark as read">
+                                <i class="fa fa-check"></i>
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <div class="icon"><i class="fa fa-bell-slash"></i></div>
+                    <p>No notifications yet.</p>
+                </div>
+            {% endif %}
         </div>
-        <div style="flex-shrink:0;">
-            
-            <form method="post" action="/notifications/mark-read/3" style="display:inline;">
-                <button type="submit" class="btn btn-ghost btn-sm" title="Mark as read">✓</button>
-            </form>
-            
-        </div>
-    </div>
-    
-    <div class="notif-item unread" style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;gap:12px;align-items:start;">
-        <div style="font-size:24px;flex-shrink:0;">ℹ️</div>
-        <div style="flex:1;">
-            <div style="font-weight:600;font-size:14px;margin-bottom:2px;">New Ticket: SIT-20260713-0002</div>
-            <div style="font-size:13px;color:var(--text-secondary);line-height:1.5;white-space:pre-line;">A new ticket has been submitted by Sindh IT Minister Office.
-
-Subject: University admission system broken
-Suggested Department: Education Department</div>
-            <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">2026-07-13 15:37</div>
-        </div>
-        <div style="flex-shrink:0;">
-            
-            <form method="post" action="/notifications/mark-read/2" style="display:inline;">
-                <button type="submit" class="btn btn-ghost btn-sm" title="Mark as read">✓</button>
-            </form>
-            
-        </div>
-    </div>
-    
-    <div class="notif-item unread" style="padding:14px 16px;border-bottom:1px solid var(--border);display:flex;gap:12px;align-items:start;">
-        <div style="font-size:24px;flex-shrink:0;">ℹ️</div>
-        <div style="flex:1;">
-            <div style="font-weight:600;font-size:14px;margin-bottom:2px;">New Ticket: SIT-20260713-0001</div>
-            <div style="font-size:13px;color:var(--text-secondary);line-height:1.5;white-space:pre-line;">A new ticket has been submitted by Sindh IT Minister Office.
-
-Subject: Road pothole on main highway causing accidents
-Suggested Department: Transport Department</div>
-            <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">2026-07-13 15:37</div>
-        </div>
-        <div style="flex-shrink:0;">
-            
-            <form method="post" action="/notifications/mark-read/1" style="display:inline;">
-                <button type="submit" class="btn btn-ghost btn-sm" title="Mark as read">✓</button>
-            </form>
-            
-        </div>
-    </div>
-    
-    
-</div>
-
-<style>
-    .notif-item.unread { background: #f0f7ff; }
-    .notif-badge {
-        background: #dc2626;
-        color: #fff;
-        font-size: 11px;
-        font-weight: 700;
-        padding: 2px 7px;
-        border-radius: 10px;
-        margin-left: auto;
-    }
-</style>
-
     </div>
 </div>
 
-
+    <script>var IS_ADMIN = {{ "true" if is_admin else "false" }};</script>
+    <script src="/static/js/chat.js"></script>
 </body>
 </html>

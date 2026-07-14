@@ -7,15 +7,15 @@
     <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="/static/css/style.css">
-    
+    <link rel="stylesheet" href="/static/css/chat.css">
 </head>
 <body>
 
-<!-- ═══ Top Bar (matches sindh.gov.pk) ═══ -->
+<!-- ═══ Top Bar ═══ -->
 <div class="top-bar">
     <div class="container">
         <div class="top-bar-left">
-            <a href="http://www.sindh.gov.pk/" target="_blank"><i class="fa fa-home"></i></a>
+            <a href="http://www.sindh.gov.pk/" target="_blank"><i class="fa fa-home"></i> sindh.gov.pk</a>
             <a href="#" title="Facebook"><i class="fab fa-facebook-f"></i></a>
             <a href="#" title="Twitter"><i class="fab fa-twitter"></i></a>
             <a href="#" title="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
@@ -23,9 +23,7 @@
         </div>
         <div class="top-bar-right">
             <a href="/notifications"><i class="fa fa-bell"></i>
-                
-                <span class="notif-badge">4</span>
-                
+                {% if unread_count is defined and unread_count %}<span class="notif-badge">{{ unread_count }}</span>{% endif %}
             </a>
             <span>|</span>
             <a href="/logout"><i class="fa fa-sign-out-alt"></i> Logout</a>
@@ -43,10 +41,8 @@
                 <small>Government of Sindh — Ticket Management System</small>
             </div>
         </a>
-        <div style="display:flex;align-items:center;gap:16px;">
-            <span style="font-size:13px;color:var(--text-secondary);">
-                <i class="fa fa-user-circle"></i> Sindh IT Minister Office
-            </span>
+        <div class="header-user">
+            <i class="fa fa-user-circle"></i> {{ user_name or 'Guest' }}
         </div>
     </div>
 </header>
@@ -56,15 +52,16 @@
     <div class="container">
         <button class="nav-toggle" onclick="document.querySelector('.nav-list').classList.toggle('open')">☰</button>
         <ul class="nav-list">
-            <li><a href="/" class=""><i class="fa fa-home icon"></i>Home</a></li>
-            
-            
-            <li><a href="/admin/tickets" class=""><i class="fa fa-ticket-alt icon"></i>All Tickets</a></li>
-            <li><a href="/admin/users" class=""><i class="fa fa-users-cog icon"></i>User Management</a></li>
-            <li><a href="/admin/analytics" class=""><i class="fa fa-chart-bar icon"></i>Analytics</a></li>
-            
-            
-            <li><a href="/notifications" class=""><i class="fa fa-bell icon"></i>Notifications</a></li>
+            <li><a href="/"><i class="fa fa-home icon"></i>Home</a></li>
+            {% if is_admin %}
+            <li><a href="/admin/tickets"><i class="fa fa-ticket-alt icon"></i>All Tickets</a></li>
+            <li><a href="/admin/users"><i class="fa fa-users-cog icon"></i>User Management</a></li>
+            {% endif %}
+            <li><a href="/submit"><i class="fa fa-plus-circle icon"></i>Submit Ticket</a></li>
+            <li><a href="/track" class="active"><i class="fa fa-search icon"></i>Track</a></li>
+            <li><a href="/notifications"><i class="fa fa-bell icon"></i>Notifications
+                {% if unread_count is defined and unread_count %}<span class="notif-badge">{{ unread_count }}</span>{% endif %}
+            </a></li>
         </ul>
     </div>
 </nav>
@@ -76,48 +73,116 @@
             <h3><i class="fa fa-bars"></i> Menu</h3>
         </div>
         <nav class="sidebar-nav">
-            
-            
-            <a href="/" class=""><span class="icon">📊</span> Dashboard</a>
-            <a href="/admin/tickets" class=""><span class="icon">🎫</span> All Tickets</a>
-            <a href="/admin/users" class=""><span class="icon">👥</span> User Management</a>
-            <a href="/admin/analytics" class=""><span class="icon">📈</span> Analytics</a>
-            
-            
-            <a href="/notifications" class="">
+            <a href="/"><span class="icon">📊</span> Dashboard</a>
+            {% if is_admin %}
+            <a href="/admin/tickets"><span class="icon">🎫</span> All Tickets</a>
+            <a href="/admin/users"><span class="icon">👥</span> User Management</a>
+            {% endif %}
+            <a href="/submit"><span class="icon">📝</span> Submit Ticket</a>
+            <a href="/track" class="active"><span class="icon">🔍</span> Track Ticket</a>
+            <a href="/notifications">
                 <span class="icon">🔔</span> Notifications
-                
-                <span class="notif-badge">4</span>
-                
+                {% if unread_count is defined and unread_count %}<span class="notif-badge">{{ unread_count }}</span>{% endif %}
             </a>
         </nav>
         <div class="sidebar-user">
-            <div class="name">Sindh IT Minister Office</div>
-            <div class="role">admin</div>
-            <a href="/logout" style="color:var(--text-muted);font-size:12px;margin-top:6px;display:inline-block;">Logout →</a>
+            <div class="name">{{ user_name or 'Guest' }}</div>
+            <div class="role">{{ user_role or '' }}</div>
+            <a href="/logout">Logout →</a>
         </div>
     </aside>
+
     <div class="main-content">
-        
-<div class="page-header">
-    <div>
-        <h1>Track Your Ticket</h1>
-        <div class="subtitle">Enter your ticket number to check status</div>
+        <div class="page-header">
+            <div>
+                <h1><i class="fa fa-search"></i> Track Your Ticket</h1>
+                <div class="subtitle">Enter your ticket number to check status</div>
+            </div>
+        </div>
+
+        <!-- Search Form -->
+        <div class="card" style="max-width:600px;">
+            <form method="post" style="display:flex;gap:12px;align-items:end;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+                <div style="flex:1;">
+                    <label style="font-size:12px;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:0.3px;">Ticket Number</label>
+                    <input type="text" name="ticket_number" class="form-control" placeholder="e.g. SIT-20260713-0001" required style="margin-top:4px;">
+                </div>
+                <button type="submit" class="btn btn-primary"><i class="fa fa-search"></i> Search</button>
+            </form>
+        </div>
+
+        <!-- Results -->
+        {% if result %}
+        <div class="card" style="max-width:750px;">
+            <div class="card-header">
+                <h2><i class="fa fa-ticket-alt"></i> {{ result.ticket_number }}</h2>
+                <span class="badge badge-{{ result.status }}">{{ result.status|replace('_',' ')|title }}</span>
+            </div>
+
+            <div class="ticket-info-grid mb-2">
+                <div class="info-item">
+                    <span class="info-label">Subject</span>
+                    <span class="info-value">{{ result.subject }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Status</span>
+                    <span class="info-value"><span class="badge badge-{{ result.status }}">{{ result.status|replace('_',' ')|title }}</span></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Priority</span>
+                    <span class="info-value"><span class="badge badge-{{ result.priority }}">{{ result.priority|title }}</span></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Category</span>
+                    <span class="info-value">{{ result.category|title }}</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Submitted</span>
+                    <span class="info-value">{{ result.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                </div>
+                {% if result.resolved_at %}
+                <div class="info-item">
+                    <span class="info-label">Resolved</span>
+                    <span class="info-value">{{ result.resolved_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <p style="color:var(--text-secondary);font-size:14px;line-height:1.6;">{{ result.description }}</p>
+
+            {% if history %}
+            <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">
+                <h3 style="font-size:15px;font-weight:700;margin-bottom:12px;"><i class="fa fa-history" style="color:var(--primary);"></i> Status History</h3>
+                <div class="timeline">
+                    {% for entry in history %}
+                    <div class="timeline-item {{ entry.new_status }}">
+                        <div class="timeline-meta">{{ entry.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                        <div class="timeline-content">
+                            {% if entry.old_status %}
+                            <span class="badge badge-{{ entry.old_status }}">{{ entry.old_status|replace('_',' ')|title }}</span>
+                            <i class="fa fa-arrow-right" style="margin:0 6px;color:var(--text-muted);font-size:11px;"></i>
+                            {% endif %}
+                            <span class="badge badge-{{ entry.new_status }}">{{ entry.new_status|replace('_',' ')|title }}</span>
+                        </div>
+                        {% if entry.note %}
+                        <div class="timeline-note">{{ entry.note }}</div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% elif result is defined and not result %}
+        <div class="alert alert-warning" style="max-width:600px;">
+            <i class="fa fa-exclamation-triangle"></i> No ticket found with that number. Please check and try again.
+        </div>
+        {% endif %}
     </div>
 </div>
 
-<div class="card" style="max-width:600px;">
-    <form method="post" style="display:flex;gap:12px;">
-        <input type="text" name="ticket_number" class="form-control" placeholder="e.g. SIT-20260713-0001" required style="flex:1;">
-        <button type="submit" class="btn btn-primary">🔍 Search</button>
-    </form>
-</div>
-
-
-
-    </div>
-</div>
-
-
+    <script>var IS_ADMIN = {{ "true" if is_admin else "false" }};</script>
+    <script src="/static/js/chat.js"></script>
 </body>
 </html>

@@ -7,14 +7,19 @@
     <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/chat.css">
 </head>
 <body>
 
-<!-- Top Bar -->
+<!-- ═══ Top Bar ═══ -->
 <div class="top-bar">
     <div class="container">
         <div class="top-bar-left">
-            <a href="http://www.sindh.gov.pk/" target="_blank"><i class="fa fa-home"></i></a>
+            <a href="http://www.sindh.gov.pk/" target="_blank"><i class="fa fa-home"></i> sindh.gov.pk</a>
+            <a href="#" title="Facebook"><i class="fab fa-facebook-f"></i></a>
+            <a href="#" title="Twitter"><i class="fab fa-twitter"></i></a>
+            <a href="#" title="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+            <a href="#" title="YouTube"><i class="fab fa-youtube"></i></a>
         </div>
         <div class="top-bar-right">
             <a href="/notifications"><i class="fa fa-bell"></i>
@@ -26,7 +31,7 @@
     </div>
 </div>
 
-<!-- Header -->
+<!-- ═══ Header ═══ -->
 <header class="site-header">
     <div class="header-inner">
         <a href="/" class="header-brand">
@@ -36,17 +41,16 @@
                 <small>Government of Sindh — Ticket Management System</small>
             </div>
         </a>
-        <div style="display:flex;align-items:center;gap:16px;">
-            <span style="font-size:13px;color:var(--text-secondary);">
-                <i class="fa fa-user-circle"></i> {{ user_name or 'Guest' }}
-            </span>
+        <div class="header-user">
+            <i class="fa fa-user-circle"></i> {{ user_name or 'Guest' }}
         </div>
     </div>
 </header>
 
-<!-- Navigation -->
+<!-- ═══ Navigation ═══ -->
 <nav class="main-nav">
     <div class="container">
+        <button class="nav-toggle" onclick="document.querySelector('.nav-list').classList.toggle('open')">☰</button>
         <ul class="nav-list">
             <li><a href="/"><i class="fa fa-home icon"></i>Home</a></li>
             {% if is_admin %}
@@ -54,15 +58,21 @@
             <li><a href="/admin/users"><i class="fa fa-users-cog icon"></i>User Management</a></li>
             <li><a href="/admin/analytics"><i class="fa fa-chart-bar icon"></i>Analytics</a></li>
             {% endif %}
-            <li><a href="/notifications"><i class="fa fa-bell icon"></i>Notifications</a></li>
+            <li><a href="/submit"><i class="fa fa-plus-circle icon"></i>Submit Ticket</a></li>
+            <li><a href="/track"><i class="fa fa-search icon"></i>Track</a></li>
+            <li><a href="/notifications"><i class="fa fa-bell icon"></i>Notifications
+                {% if unread_count %}<span class="notif-badge">{{ unread_count }}</span>{% endif %}
+            </a></li>
         </ul>
     </div>
 </nav>
 
-<!-- Content -->
+<!-- ═══ Content ═══ -->
 <div class="app-layout">
     <aside class="sidebar">
-        <div class="sidebar-header"><h3><i class="fa fa-bars"></i> Menu</h3></div>
+        <div class="sidebar-header">
+            <h3><i class="fa fa-bars"></i> Menu</h3>
+        </div>
         <nav class="sidebar-nav">
             <a href="/"><span class="icon">📊</span> Dashboard</a>
             {% if is_admin %}
@@ -70,6 +80,8 @@
             <a href="/admin/users"><span class="icon">👥</span> User Management</a>
             <a href="/admin/analytics"><span class="icon">📈</span> Analytics</a>
             {% endif %}
+            <a href="/submit"><span class="icon">📝</span> Submit Ticket</a>
+            <a href="/track"><span class="icon">🔍</span> Track Ticket</a>
             <a href="/notifications">
                 <span class="icon">🔔</span> Notifications
                 {% if unread_count %}<span class="notif-badge">{{ unread_count }}</span>{% endif %}
@@ -78,69 +90,91 @@
         <div class="sidebar-user">
             <div class="name">{{ user_name or 'Guest' }}</div>
             <div class="role">{{ user_role or '' }}</div>
-            <a href="/logout" style="color:var(--text-muted);font-size:12px;margin-top:6px;display:inline-block;">Logout →</a>
+            <a href="/logout">Logout →</a>
         </div>
     </aside>
+
     <div class="main-content">
+        <!-- ═══ Page Header ═══ -->
         <div class="page-header">
             <div>
-                <h1 style="font-family:monospace;">{{ ticket.ticket_number }}</h1>
+                <h1 style="font-family:'Courier New',monospace;">{{ ticket.ticket_number }}</h1>
                 <div class="subtitle">{{ ticket.subject }}</div>
             </div>
-            <div style="display:flex;gap:8px;">
+            <div class="page-header-actions">
                 <span class="badge badge-{{ ticket.status }}">{{ ticket.status|replace('_',' ')|title }}</span>
                 <span class="badge badge-{{ ticket.priority }}">{{ ticket.priority|title }}</span>
             </div>
         </div>
 
-        <div style="display:grid;grid-template-columns:2fr 1fr;gap:20px;">
-            <!-- Main Content -->
+        <!-- ═══ Two Column Layout ═══ -->
+        <div class="ticket-detail-grid">
+            <!-- Main Column -->
             <div>
-                <div class="card" style="margin-bottom:20px;">
-                    <h3 style="margin-bottom:12px;">Description</h3>
+                <!-- Description Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2><i class="fa fa-file-alt"></i> Description</h2>
+                    </div>
                     <p style="line-height:1.8;color:var(--text);">{{ ticket.description }}</p>
-                    <div style="margin-top:16px;display:flex;gap:24px;font-size:13px;color:var(--text-secondary);">
-                        <span>📋 <strong>Category:</strong> {{ ticket.category|title }}</span>
-                        <span>📅 <strong>Submitted:</strong> {{ ticket.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
-                        <span>🔄 <strong>Updated:</strong> {{ ticket.updated_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                    <div style="margin-top:16px;display:flex;flex-wrap:wrap;gap:20px;font-size:13px;color:var(--text-secondary);">
+                        <span><i class="fa fa-tag" style="color:var(--primary);"></i> <strong>Category:</strong> {{ ticket.category|title }}</span>
+                        <span><i class="fa fa-calendar" style="color:var(--primary);"></i> <strong>Submitted:</strong> {{ ticket.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                        <span><i class="fa fa-sync" style="color:var(--primary);"></i> <strong>Updated:</strong> {{ ticket.updated_at.strftime('%Y-%m-%d %H:%M') }}</span>
                     </div>
                 </div>
 
-                <!-- Attachments -->
-                <div class="card" style="margin-bottom:20px;">
+                <!-- AI Suggestion -->
+                {% if ai_suggested_dept %}
+                <div class="alert alert-info">
+                    <i class="fa fa-robot"></i>
+                    <div>
+                        <strong>AI Suggested Department:</strong> {{ ai_suggested_dept }}
+                        {% if ai_confidence %} — Confidence: {{ ai_confidence }}{% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Attachments Card -->
+                <div class="card">
                     <div class="card-header">
-                        <h2>📎 Attachments</h2>
+                        <h2><i class="fa fa-paperclip"></i> Attachments</h2>
                     </div>
 
                     {% if attachments %}
                     <div style="display:flex;flex-direction:column;gap:8px;">
                         {% for att in attachments %}
                         <a href="/uploads/{{ ticket.id }}/{{ att.stored_name }}" target="_blank"
-                           style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg-secondary);border-radius:6px;text-decoration:none;color:var(--text);font-size:13px;border:1px solid var(--border);">
-                            <i class="fa fa-file" style="color:var(--sindh-green);"></i>
+                           style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg);border-radius:var(--radius-sm);text-decoration:none;color:var(--text);font-size:13px;border:1px solid var(--border);transition:border-color 0.2s;">
+                            <i class="fa fa-file" style="color:var(--primary);"></i>
                             <span style="flex:1;">{{ att.original_name }}</span>
                             <span style="color:var(--text-muted);font-size:11px;">{{ att.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
                         </a>
                         {% endfor %}
                     </div>
                     {% else %}
-                    <p style="color:var(--text-muted);font-size:13px;">No files attached yet</p>
+                    <p style="color:var(--text-muted);font-size:13px;">No files attached yet.</p>
                     {% endif %}
 
                     <!-- Upload Form -->
                     <form method="post" action="/ticket/{{ ticket.id }}/upload" enctype="multipart/form-data"
-                          style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);display:flex;gap:12px;align-items:end;">
-                        <div style="flex:1;">
-                            <label style="font-size:12px;color:var(--text-secondary);font-weight:600;">Attach file (max 10MB)</label>
+                          style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);display:flex;gap:12px;align-items:end;flex-wrap:wrap;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+                        <div style="flex:1;min-width:200px;">
+                            <label style="font-size:12px;color:var(--text-secondary);font-weight:700;text-transform:uppercase;letter-spacing:0.3px;">Attach file (max 10MB)</label>
                             <input type="file" name="file" class="form-control" required style="margin-top:4px;">
                         </div>
-                        <button type="submit" class="btn btn-primary btn-sm">📤 Upload</button>
+                        <button type="submit" class="btn btn-primary btn-sm"><i class="fa fa-upload"></i> Upload</button>
                     </form>
                 </div>
 
-                <!-- Status History -->
+                <!-- Status History Card -->
                 <div class="card">
-                    <h3 style="margin-bottom:16px;">📋 Status History</h3>
+                    <div class="card-header">
+                        <h2><i class="fa fa-history"></i> Status History</h2>
+                    </div>
+
+                    {% if history %}
                     <div class="timeline">
                         {% for entry in history %}
                         <div class="timeline-item {{ entry.new_status }}">
@@ -148,7 +182,7 @@
                             <div class="timeline-content">
                                 {% if entry.old_status %}
                                 <span class="badge badge-{{ entry.old_status }}">{{ entry.old_status|replace('_',' ')|title }}</span>
-                                →
+                                <i class="fa fa-arrow-right" style="margin:0 6px;color:var(--text-muted);font-size:11px;"></i>
                                 {% endif %}
                                 <span class="badge badge-{{ entry.new_status }}">{{ entry.new_status|replace('_',' ')|title }}</span>
                             </div>
@@ -158,14 +192,20 @@
                         </div>
                         {% endfor %}
                     </div>
+                    {% else %}
+                    <p style="color:var(--text-muted);font-size:13px;">No history entries.</p>
+                    {% endif %}
                 </div>
             </div>
 
-            <!-- Sidebar -->
+            <!-- Sidebar Column -->
             <div>
+                <!-- Admin Actions Card -->
                 {% if is_admin %}
-                <div class="card" style="margin-bottom:20px;">
-                    <h3 style="margin-bottom:16px;">🔧 Admin Actions</h3>
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fa fa-tools" style="color:var(--primary);"></i> Admin Actions</h3>
+                    </div>
                     <form method="post" action="/ticket/{{ ticket.id }}/update">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
                         <div class="form-group">
@@ -197,20 +237,44 @@
                             <label>Note (optional)</label>
                             <textarea name="note" class="form-control" rows="2" placeholder="Add a note..."></textarea>
                         </div>
-                        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">Update Ticket</button>
+                        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">
+                            <i class="fa fa-save"></i> Update Ticket
+                        </button>
                     </form>
                 </div>
                 {% endif %}
 
-                <!-- Info Card -->
+                <!-- Ticket Info Card -->
                 <div class="card">
-                    <h3 style="margin-bottom:12px;">ℹ️ Ticket Info</h3>
-                    <div style="font-size:13px;line-height:2;">
-                        <div><strong>Submitted by:</strong> {{ submitter_name }}</div>
-                        <div><strong>Department:</strong> {{ dept_name }}</div>
-                        <div><strong>Created:</strong> {{ ticket.created_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                    <div class="card-header">
+                        <h3><i class="fa fa-info-circle" style="color:var(--primary);"></i> Ticket Info</h3>
+                    </div>
+                    <div class="ticket-info-grid">
+                        <div class="info-item">
+                            <span class="info-label">Submitted by</span>
+                            <span class="info-value">{{ submitter_name }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Department</span>
+                            <span class="info-value">{{ dept_name }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Service</span>
+                            <span class="info-value">{{ ticket.service_name or '—' }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">City</span>
+                            <span class="info-value">{{ ticket.city or '—' }}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Created</span>
+                            <span class="info-value">{{ ticket.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                        </div>
                         {% if ticket.resolved_at %}
-                        <div><strong>Resolved:</strong> {{ ticket.resolved_at.strftime('%Y-%m-%d %H:%M') }}</div>
+                        <div class="info-item">
+                            <span class="info-label">Resolved</span>
+                            <span class="info-value">{{ ticket.resolved_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                        </div>
                         {% endif %}
                     </div>
                 </div>
@@ -218,5 +282,8 @@
         </div>
     </div>
 </div>
+
+    <script>var IS_ADMIN = {{ "true" if is_admin else "false" }};</script>
+    <script src="/static/js/chat.js"></script>
 </body>
 </html>
