@@ -734,7 +734,7 @@ async def notifications_page(request: Request, db: AsyncSession = Depends(get_db
 
 
 @app.post("/notifications/mark-read/{notif_id}")
-async def mark_read(notif_id: int, db: AsyncSession = Depends(get_db)):
+async def mark_read(request: Request, notif_id: int, db: AsyncSession = Depends(get_db)):
     user = get_user(request)
     if not user:
         return RedirectResponse(url="/login", status_code=303)

@@ -7,33 +7,22 @@
     <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="/static/css/style.css">
-    
 </head>
 <body>
-
-<!-- ═══ Top Bar (matches sindh.gov.pk) ═══ -->
 <div class="top-bar">
     <div class="container">
         <div class="top-bar-left">
             <a href="http://www.sindh.gov.pk/" target="_blank"><i class="fa fa-home"></i></a>
-            <a href="#" title="Facebook"><i class="fab fa-facebook-f"></i></a>
-            <a href="#" title="Twitter"><i class="fab fa-twitter"></i></a>
-            <a href="#" title="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
-            <a href="#" title="YouTube"><i class="fab fa-youtube"></i></a>
         </div>
         <div class="top-bar-right">
             <a href="/notifications"><i class="fa fa-bell"></i>
-                
-                <span class="notif-badge">4</span>
-                
+                {% if unread_count %}<span class="notif-badge">{{ unread_count }}</span>{% endif %}
             </a>
             <span>|</span>
             <a href="/logout"><i class="fa fa-sign-out-alt"></i> Logout</a>
         </div>
     </div>
 </div>
-
-<!-- ═══ Header ═══ -->
 <header class="site-header">
     <div class="header-inner">
         <a href="/" class="header-brand">
@@ -45,59 +34,50 @@
         </a>
         <div style="display:flex;align-items:center;gap:16px;">
             <span style="font-size:13px;color:var(--text-secondary);">
-                <i class="fa fa-user-circle"></i> Sindh IT Minister Office
+                <i class="fa fa-user-circle"></i> {{ user_name or 'Guest' }}
             </span>
         </div>
     </div>
 </header>
-
-<!-- ═══ Navigation ═══ -->
 <nav class="main-nav">
     <div class="container">
+        <button class="nav-toggle" onclick="document.querySelector('.nav-list').classList.toggle('open')">☰</button>
         <ul class="nav-list">
-            <li><a href="/" class=""><i class="fa fa-home icon"></i>Home</a></li>
-            
-            
-            <li><a href="/admin/tickets" class=""><i class="fa fa-ticket-alt icon"></i>All Tickets</a></li>
+            <li><a href="/"><i class="fa fa-home icon"></i>Home</a></li>
+            {% if is_admin %}
+            <li><a href="/admin/tickets"><i class="fa fa-ticket-alt icon"></i>All Tickets</a></li>
             <li><a href="/admin/users" class="active"><i class="fa fa-users-cog icon"></i>User Management</a></li>
-            <li><a href="/admin/analytics" class=""><i class="fa fa-chart-bar icon"></i>Analytics</a></li>
-            
-            
-            <li><a href="/notifications" class=""><i class="fa fa-bell icon"></i>Notifications</a></li>
+            <li><a href="/admin/analytics"><i class="fa fa-chart-bar icon"></i>Analytics</a></li>
+            {% endif %}
+            <li><a href="/notifications"><i class="fa fa-bell icon"></i>Notifications
+                {% if unread_count %}<span class="notif-badge">{{ unread_count }}</span>{% endif %}
+            </a></li>
         </ul>
     </div>
 </nav>
-
-<!-- ═══ Content ═══ -->
 <div class="app-layout">
     <aside class="sidebar">
-        <div class="sidebar-header">
-            <h3><i class="fa fa-bars"></i> Menu</h3>
-        </div>
+        <div class="sidebar-header"><h3><i class="fa fa-bars"></i> Menu</h3></div>
         <nav class="sidebar-nav">
-            
-            
-            <a href="/" class=""><span class="icon">📊</span> Dashboard</a>
-            <a href="/admin/tickets" class=""><span class="icon">🎫</span> All Tickets</a>
+            <a href="/"><span class="icon">📊</span> Dashboard</a>
+            {% if is_admin %}
+            <a href="/admin/tickets"><span class="icon">🎫</span> All Tickets</a>
             <a href="/admin/users" class="active"><span class="icon">👥</span> User Management</a>
-            <a href="/admin/analytics" class=""><span class="icon">📈</span> Analytics</a>
-            
-            
-            <a href="/notifications" class="">
+            <a href="/admin/analytics"><span class="icon">📈</span> Analytics</a>
+            {% endif %}
+            <a href="/notifications">
                 <span class="icon">🔔</span> Notifications
-                
-                <span class="notif-badge">4</span>
-                
+                {% if unread_count %}<span class="notif-badge">{{ unread_count }}</span>{% endif %}
             </a>
         </nav>
         <div class="sidebar-user">
-            <div class="name">Sindh IT Minister Office</div>
-            <div class="role">admin</div>
+            <div class="name">{{ user_name or 'Guest' }}</div>
+            <div class="role">{{ user_role or '' }}</div>
             <a href="/logout" style="color:var(--text-muted);font-size:12px;margin-top:6px;display:inline-block;">Logout →</a>
         </div>
     </aside>
     <div class="main-content">
-        
+
 <div class="page-header">
     <div>
         <h1>👥 User Management</h1>
@@ -110,8 +90,8 @@
 <div id="createModal" class="modal-overlay" style="display:none;">
     <div class="modal" style="background:#fff;border-radius:12px;padding:32px;width:500px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
         <h2 style="margin-bottom:20px;">Create New User</h2>
-        
         <form method="post" action="/admin/users/create">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
             <div class="form-row">
                 <div class="form-group">
                     <label>Full Name *</label>
@@ -150,27 +130,9 @@
                 <label>Department</label>
                 <select name="department_id" class="form-control">
                     <option value="">— Select —</option>
-                    
-                    <option value="10">Agriculture Department</option>
-                    
-                    <option value="2">Education Department</option>
-                    
-                    <option value="6">Excise &amp; Taxation</option>
-                    
-                    <option value="1">Health Department</option>
-                    
-                    <option value="8">Information Department</option>
-                    
-                    <option value="5">Police Department</option>
-                    
-                    <option value="4">Revenue Department</option>
-                    
-                    <option value="7">Social Welfare</option>
-                    
-                    <option value="3">Transport Department</option>
-                    
-                    <option value="9">Works &amp; Services</option>
-                    
+                    {% for dept in departments %}
+                    <option value="{{ dept.id }}">{{ dept.name }}</option>
+                    {% endfor %}
                 </select>
             </div>
             <div style="display:flex;gap:12px;margin-top:20px;">
@@ -186,69 +148,39 @@
     <div class="table-wrapper">
         <table>
             <thead>
-                <tr>
-                    <th>User</th>
-                    <th>Role</th>
-                    <th>Department</th>
-                    <th>Email</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                </tr>
+                <tr><th>User</th><th>Role</th><th>Department</th><th>Email</th><th>Status</th><th>Actions</th></tr>
             </thead>
             <tbody>
-            
+            {% for u in users %}
             <tr>
                 <td>
-                    <strong>Test Probe</strong><br>
-                    <span style="font-size:12px;color:var(--text-muted);">@testprobe123</span>
+                    <strong>{{ u.full_name }}</strong><br>
+                    <span style="font-size:12px;color:var(--text-muted);">@{{ u.username }}</span>
                 </td>
                 <td>
-                    <span class="badge badge-closed">
-                        Citizen
+                    <span class="badge badge-{{ 'submitted' if u.role == 'admin' else 'closed' if u.role == 'citizen' else 'in_progress' }}">
+                        {{ u.role|title }}
                     </span>
                 </td>
-                <td>—</td>
-                <td style="font-size:13px;">—</td>
+                <td>{{ u.department.name if u.department else '—' }}</td>
+                <td style="font-size:13px;">{{ u.email or '—' }}</td>
                 <td>
-                    
-                    <span class="badge badge-resolved">Active</span>
-                    
+                    <span class="badge badge-{{ 'resolved' if u.is_active else 'rejected' }}">
+                        {{ 'Active' if u.is_active else 'Disabled' }}
+                    </span>
                 </td>
                 <td>
-                    
-                    <form method="post" action="/admin/users/2/toggle" style="display:inline;">
-                        
-                        <button type="submit" class="btn btn-danger btn-sm" title="Disable">🚫</button>
-                        
+                    {% if u.id != user.user_id %}
+                    <form method="post" action="/admin/users/{{ u.id }}/toggle" style="display:inline;">
+                        <button type="submit" class="btn btn-{{ 'danger' if u.is_active else 'ghost' }} btn-sm" title="{{ 'Disable' if u.is_active else 'Enable' }}">
+                            {{ '🚫' if u.is_active else '✅' }}
+                        </button>
                     </form>
-                    
-                    <button onclick="openRoleModal(2, 'citizen', null)" class="btn btn-ghost btn-sm" title="Edit role">✏️</button>
+                    {% endif %}
+                    <button onclick="openRoleModal({{ u.id }}, '{{ u.role }}', {{ u.department_id or 'null' }})" class="btn btn-ghost btn-sm" title="Edit role">✏️</button>
                 </td>
             </tr>
-            
-            <tr>
-                <td>
-                    <strong>Sindh IT Minister Office</strong><br>
-                    <span style="font-size:12px;color:var(--text-muted);">@admin</span>
-                </td>
-                <td>
-                    <span class="badge badge-submitted">
-                        Admin
-                    </span>
-                </td>
-                <td>—</td>
-                <td style="font-size:13px;">admin@sindh.gov.pk</td>
-                <td>
-                    
-                    <span class="badge badge-resolved">Active</span>
-                    
-                </td>
-                <td>
-                    
-                    <button onclick="openRoleModal(1, 'admin', null)" class="btn btn-ghost btn-sm" title="Edit role">✏️</button>
-                </td>
-            </tr>
-            
+            {% endfor %}
             </tbody>
         </table>
     </div>
@@ -259,6 +191,7 @@
     <div class="modal" style="background:#fff;border-radius:12px;padding:32px;width:400px;max-width:90vw;">
         <h2 style="margin-bottom:20px;">Edit User Role</h2>
         <form method="post" id="roleForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
             <div class="form-group">
                 <label>Role</label>
                 <select name="role" class="form-control" id="editRoleSelect" onchange="toggleEditDeptField()">
@@ -269,70 +202,38 @@
             </div>
             <div class="form-group" id="editDeptField" style="display:none;">
                 <label>Department</label>
-                <select name="department_id" class="form-control">
+                <select name="department_id" class="form-control" id="editDeptSelect">
                     <option value="">— Select —</option>
-                    
-                    <option value="10">Agriculture Department</option>
-                    
-                    <option value="2">Education Department</option>
-                    
-                    <option value="6">Excise &amp; Taxation</option>
-                    
-                    <option value="1">Health Department</option>
-                    
-                    <option value="8">Information Department</option>
-                    
-                    <option value="5">Police Department</option>
-                    
-                    <option value="4">Revenue Department</option>
-                    
-                    <option value="7">Social Welfare</option>
-                    
-                    <option value="3">Transport Department</option>
-                    
-                    <option value="9">Works &amp; Services</option>
-                    
+                    {% for dept in departments %}
+                    <option value="{{ dept.id }}">{{ dept.name }}</option>
+                    {% endfor %}
                 </select>
             </div>
             <div style="display:flex;gap:12px;margin-top:20px;">
-                <button type="submit" class="btn btn-primary">Save Changes</button>
+                <button type="submit" class="btn btn-primary">Save</button>
                 <button type="button" class="btn btn-ghost" onclick="document.getElementById('roleModal').style.display='none'">Cancel</button>
             </div>
         </form>
     </div>
 </div>
 
+    </div>
+</div>
+
 <script>
 function toggleDeptField() {
-    const role = document.getElementById('roleSelect').value;
-    document.getElementById('deptField').style.display = role === 'department' ? 'block' : 'none';
+    document.getElementById('deptField').style.display = document.getElementById('roleSelect').value === 'department' ? 'block' : 'none';
 }
 function toggleEditDeptField() {
-    const role = document.getElementById('editRoleSelect').value;
-    document.getElementById('editDeptField').style.display = role === 'department' ? 'block' : 'none';
+    document.getElementById('editDeptField').style.display = document.getElementById('editRoleSelect').value === 'department' ? 'block' : 'none';
 }
-function openRoleModal(userId, currentRole, currentDept) {
+function openRoleModal(userId, role, deptId) {
     document.getElementById('roleForm').action = '/admin/users/' + userId + '/update-role';
-    document.getElementById('editRoleSelect').value = currentRole;
-    if (currentDept) {
-        document.getElementById('editDeptField').querySelector('select').value = currentDept;
-    }
+    document.getElementById('editRoleSelect').value = role;
+    if (deptId) { document.getElementById('editDeptSelect').value = deptId; }
     toggleEditDeptField();
     document.getElementById('roleModal').style.display = 'flex';
 }
 </script>
-
-<style>
-.modal-overlay {
-    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.5); z-index: 1000;
-    display: flex; align-items: center; justify-content: center;
-}
-</style>
-
-    </div>
-</div>
-
-
 </body>
 </html>

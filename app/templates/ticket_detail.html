@@ -167,6 +167,7 @@
                 <div class="card" style="margin-bottom:20px;">
                     <h3 style="margin-bottom:16px;">🔧 Admin Actions</h3>
                     <form method="post" action="/ticket/{{ ticket.id }}/update">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
                         <div class="form-group">
                             <label>Assign to Department</label>
                             <select name="department_id" class="form-control">
