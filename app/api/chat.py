@@ -621,11 +621,20 @@ Valid statuses: submitted, assigned, in_progress, resolved, closed
 - Agriculture/Farming → Agriculture Department
 - Public Transport → Transport Department
 
+## NATURAL LANGUAGE → STATUS MAPPING:
+- "in progress", "working on it", "started", "begin" → status: "in_progress"
+- "submitted", "new", "pending" → status: "submitted"
+- "assigned" → status: "assigned"
+- "done", "completed", "resolved", "fixed" → status: "resolved"
+- "closed", "archive" → status: "closed"
+
 ## RULES:
 - NEVER answer with made-up numbers. Use only the database data provided.
 - When unsure, ask for clarification.
 - For write actions, always include the exact ticket number or clear filter.
 - ALWAYS use valid department names from the list above. NEVER make up department names.
+- ALWAYS use valid status values from the list above. Map natural language using the mapping above.
+- When user describes a desired state (e.g., "it's in progress"), extract the target status and use change_status action.
 - Reply concisely. Use bullet points for lists.
 - Reply in the same language the user writes in.
 """
