@@ -41,7 +41,7 @@ The app will be available at `http://localhost:8000`
 
 | Role | Username | Password |
 |------|----------|----------|
-| Admin | admin | REDACTED |
+| Admin | admin | *(see .env)* |
 
 Citizens can register at `/register`.
 
