@@ -13,7 +13,7 @@ from sqlalchemy import select, func, and_, or_, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.models import User, Department, Ticket, TicketHistory, Attachment, Notification
+from app.core.models import User, Department, Ticket, TicketHistory, Attachment, Notification, ChatHistory
 from app.ai.suggest import DEPARTMENTS, suggest_department
 
 logger = logging.getLogger(__name__)
@@ -52,6 +52,34 @@ async def _next_ticket_number(db: AsyncSession) -> str:
     )
     count = (result.scalar() or 0) + 1
     return f"SIT-{today}-{count:04d}"
+
+
+async def save_chat_message(db: AsyncSession, user_id: int, role: str, content: str):
+    """Save a chat message to the database."""
+    msg = ChatHistory(user_id=user_id, role=role, content=content)
+    db.add(msg)
+    await db.commit()
+
+
+async def load_chat_history(db: AsyncSession, user_id: int, limit: int = 50) -> list[dict]:
+    """Load recent chat history for a user from the database."""
+    result = await db.execute(
+        select(ChatHistory.role, ChatHistory.content)
+        .where(ChatHistory.user_id == user_id)
+        .order_by(ChatHistory.created_at.desc())
+        .limit(limit)
+    )
+    rows = result.all()
+    # Reverse to get chronological order
+    return [{"role": r[0], "content": r[1]} for r in reversed(rows)]
+
+
+async def clear_chat_history(db: AsyncSession, user_id: int):
+    """Clear all chat history for a user."""
+    await db.execute(
+        text("DELETE FROM chat_history WHERE user_id = :uid"), {"uid": user_id}
+    )
+    await db.commit()
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -100,6 +128,9 @@ CITIZEN_WELCOME = "Assalam o Alaikum! Welcome to the Sindh Government Ticket Sys
 
 async def citizen_chat(user_id: int, message: str, history: list[dict], db: AsyncSession) -> dict:
     """Handle citizen chat. Returns {"reply": str, "action": optional dict}."""
+    # Save user message to database
+    await save_chat_message(db, user_id, "user", message)
+
     messages_text = ""
     for msg in history:
         role = "Assistant" if msg["role"] == "assistant" else "Citizen"
@@ -108,7 +139,9 @@ async def citizen_chat(user_id: int, message: str, history: list[dict], db: Asyn
 
     response = await _groq_chat(CITIZEN_SYSTEM, messages_text)
     if not response:
-        return {"reply": "I'm having trouble connecting to the AI service. Please try again or use the submit form directly."}
+        reply = "I'm having trouble connecting to the AI service. Please try again or use the submit form directly."
+        await save_chat_message(db, user_id, "assistant", reply)
+        return {"reply": reply}
 
     json_match = re.search(r'\{"action"\s*:\s*"submit"[^}]+\}', response)
     if json_match:
@@ -161,14 +194,19 @@ async def citizen_chat(user_id: int, message: str, history: list[dict], db: Asyn
                 f"📍 **City:** {city or 'Not specified'}\n\n"
                 f"You can track your ticket status using the Track page or check your dashboard."
             )
+            await save_chat_message(db, user_id, "assistant", reply)
             return {"reply": reply}
 
         except Exception as e:
             logger.error(f"Ticket submission from chat failed: {e}")
-            return {"reply": "Sorry, there was an error filing your ticket. Please try using the submit form."}
+            reply = "Sorry, there was an error filing your ticket. Please try using the submit form."
+            await save_chat_message(db, user_id, "assistant", reply)
+            return {"reply": reply}
 
     clean_reply = re.sub(r'\{[^}]*"action"[^}]*\}', '', response).strip()
-    return {"reply": clean_reply or response}
+    final_reply = clean_reply or response
+    await save_chat_message(db, user_id, "assistant", final_reply)
+    return {"reply": final_reply}
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -525,6 +563,8 @@ def _describe_action(action: dict) -> str:
 
 async def admin_chat(user_id: int, message: str, history: list[dict], db: AsyncSession) -> dict:
     """Handle admin chat. Supports read queries AND write actions."""
+    # Save user message to database
+    await save_chat_message(db, user_id, "user", message)
 
     # Check if this is a confirmation of a pending write action
     msg_lower = message.strip().lower()
@@ -536,14 +576,18 @@ async def admin_chat(user_id: int, message: str, history: list[dict], db: AsyncS
                     try:
                         action = json.loads(action_match.group(1))
                         result = await _execute_write_action(action, db)
-                        return {"reply": result["message"]}
+                        reply = result["message"]
+                        await save_chat_message(db, user_id, "assistant", reply)
+                        return {"reply": reply}
                     except Exception as e:
                         logger.error(f"Write action failed: {e}")
                         return {"reply": f"❌ Action failed: {str(e)}"}
                 break
 
     if msg_lower in ("no", "cancel", "n", "nevermind", "never mind", "abort"):
-        return {"reply": "OK, action cancelled. What else can I help you with?"}
+        reply = "OK, action cancelled. What else can I help you with?"
+        await save_chat_message(db, user_id, "assistant", reply)
+        return {"reply": reply}
 
     # Build conversation history for Groq
     messages_text = ""
@@ -557,7 +601,9 @@ async def admin_chat(user_id: int, message: str, history: list[dict], db: AsyncS
     # Let the AI decide: query or write action?
     response = await _groq_chat(ADMIN_SYSTEM, messages_text)
     if not response:
-        return {"reply": "I'm having trouble connecting to the AI service. Please try again."}
+        reply = "I'm having trouble connecting to the AI service. Please try again."
+        await save_chat_message(db, user_id, "assistant", reply)
+        return {"reply": reply}
 
     # ── Try to extract a WRITE action ──
     action_match = re.search(r'\{"action"\s*:\s*"(assign_ticket|change_status|bulk_assign|bulk_status)".*\}', response)
@@ -600,11 +646,14 @@ async def admin_chat(user_id: int, message: str, history: list[dict], db: AsyncS
                     f"Type **confirm** to proceed or **cancel** to abort."
                 )
                 # Hide the action JSON from user but store it for confirmation
+                await save_chat_message(db, user_id, "assistant", reply)
                 return {"reply": reply, "_pending_action": action}
 
             # Single-ticket actions: execute immediately
             result = await _execute_write_action(action, db)
-            return {"reply": result["message"]}
+            reply = result["message"]
+            await save_chat_message(db, user_id, "assistant", reply)
+            return {"reply": reply}
 
         except json.JSONDecodeError:
             pass
@@ -637,13 +686,16 @@ async def admin_chat(user_id: int, message: str, history: list[dict], db: AsyncS
                 "You are a data formatting assistant. Format the given database results into a clear, readable answer. Use the exact numbers from the data. Do not hallucinate.",
                 data_prompt
             )
-            return {"reply": formatted or f"Query result: {json.dumps(result_data, indent=2, default=str)}"}
+            final_reply = formatted or f"Query result: {json.dumps(result_data, indent=2, default=str)}"
+            await save_chat_message(db, user_id, "assistant", final_reply)
+            return {"reply": final_reply}
 
         except Exception as e:
             logger.error(f"Admin query failed: {e}")
             return {"reply": "I encountered an error processing that query. Please try rephrasing."}
 
     # AI gave a direct conversational answer
+    await save_chat_message(db, user_id, "assistant", response)
     return {"reply": response}
 
 

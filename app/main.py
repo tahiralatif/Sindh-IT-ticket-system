@@ -26,7 +26,7 @@ from app.core.security import (
 )
 from app.middleware.auth import SessionMiddleware, CSRFMiddleware
 from app.ai.suggest import suggest_department, keyword_fallback
-from app.api.chat import handle_chat, CITIZEN_WELCOME
+from app.api.chat import handle_chat, CITIZEN_WELCOME, load_chat_history, clear_chat_history
 
 # Rate limiter
 limiter = Limiter(key_func=get_remote_address)
@@ -985,15 +985,45 @@ async def api_analytics_city(db: AsyncSession = Depends(get_db)):
 # ─── Chatbot API ──────────────────────────────────────────────────
 
 @app.get("/api/chat/welcome")
-async def chat_welcome(request: Request):
-    """Return role-appropriate welcome message."""
+async def chat_welcome(request: Request, db: AsyncSession = Depends(get_db)):
+    """Return role-appropriate welcome message + chat history."""
     user = request.state.user
     if not user:
         return JSONResponse({"error": "Not authenticated"}, status_code=401)
+    
+    # Load chat history from database
+    history = await load_chat_history(db, user["user_id"], limit=50)
+    
     if user["role"] in ("admin", "department"):
-        return {"reply": "Hello! I'm your admin assistant. I can query the ticket database for you. Try asking:\n• How many tickets are pending?\n• What's the breakdown by department?\n• Show me today's submissions\n• Any overdue tickets?"}
+        return {
+            "reply": "Hello! I'm your admin assistant. I can query the ticket database for you. Try asking:\n• How many tickets are pending?\n• What's the breakdown by department?\n• Show me today's submissions\n• Any overdue tickets?",
+            "history": history
+        }
     else:
-        return {"reply": CITIZEN_WELCOME}
+        return {
+            "reply": CITIZEN_WELCOME,
+            "history": history
+        }
+
+
+@app.get("/api/chat/history")
+async def chat_history_endpoint(request: Request, db: AsyncSession = Depends(get_db)):
+    """Load chat history for current user."""
+    user = request.state.user
+    if not user:
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+    history = await load_chat_history(db, user["user_id"], limit=100)
+    return {"history": history}
+
+
+@app.post("/api/chat/clear")
+async def chat_clear_endpoint(request: Request, db: AsyncSession = Depends(get_db)):
+    """Clear chat history for current user."""
+    user = request.state.user
+    if not user:
+        return JSONResponse({"error": "Not authenticated"}, status_code=401)
+    await clear_chat_history(db, user["user_id"])
+    return {"reply": "Chat history cleared."}
 
 
 @app.post("/api/chat")

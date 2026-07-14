@@ -37,6 +37,19 @@ class Department(Base):
     tickets = relationship("Ticket", back_populates="department")
 
 
+# ─── Chat History Model ─────────────────────────────────────────
+
+class ChatHistory(Base):
+    """Stores chat messages for conversation persistence."""
+    __tablename__ = "chat_history"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    role = Column(String(20), nullable=False)  # "user" or "assistant"
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
 class Ticket(Base):
     __tablename__ = "tickets"
 

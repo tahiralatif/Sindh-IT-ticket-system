@@ -72,7 +72,22 @@
             const resp = await fetch('/api/chat/welcome');
             const data = await resp.json();
             hideTyping();
+            
+            // Show welcome message
             addMessage(data.reply, 'bot');
+            
+            // Load previous history if exists
+            if (data.history && data.history.length > 0) {
+                chatHistory = [];
+                for (const msg of data.history) {
+                    if (msg.role === 'user') {
+                        addMessage(msg.content, 'user');
+                    } else {
+                        addMessage(msg.content, 'bot');
+                    }
+                    chatHistory.push(msg);
+                }
+            }
         } catch (e) {
             hideTyping();
             addMessage('Welcome! How can I help you today?', 'bot');
