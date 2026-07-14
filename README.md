@@ -1,4 +1,6 @@
-# Sindh IT Ticket System
+# 🇵🇰 Sindh IT Ticket System
+
+> **Live:** [sindh-it-ticket.14.jugaar.ai](https://sindh-it-ticket.14.jugaar.ai)
 
 Government ticket management system for the Science & IT Department, Government of Sindh.
 
