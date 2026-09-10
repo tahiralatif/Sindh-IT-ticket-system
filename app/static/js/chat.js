@@ -94,14 +94,21 @@
         }
     }
 
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.appendChild(document.createTextNode(text));
+        return div.innerHTML;
+    }
+
     function addMessage(text, role) {
         const container = document.getElementById('chat-messages');
         const typingEl = document.getElementById('chat-typing');
         const msg = document.createElement('div');
         msg.className = `chat-msg ${role}`;
-        // Markdown-like bold
-        text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-        msg.innerHTML = text;
+        // Escape HTML first, then apply markdown-like bold
+        let safe = escapeHtml(text);
+        safe = safe.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        msg.innerHTML = safe;
         container.insertBefore(msg, typingEl);
         container.scrollTop = container.scrollHeight;
         return msg;

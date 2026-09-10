@@ -1,7 +1,9 @@
 """Sindh IT Ticket System — Main FastAPI Application."""
 import os
+import re
 import json
 import uuid
+import time
 import asyncio
 from datetime import datetime, timezone
 from contextlib import asynccontextmanager
@@ -24,6 +26,8 @@ from app.core.models import (
 from app.core.security import (
     hash_password, verify_password, create_session_token,
     decode_session_token, generate_csrf_token, validate_csrf_token,
+    validate_password_policy, generate_password_reset_token,
+    verify_password_reset_token, invalidate_password_reset_token,
 )
 from app.middleware.auth import SessionMiddleware, CSRFMiddleware
 from app.ai.suggest import suggest_department, keyword_fallback
@@ -57,6 +61,51 @@ def get_client_ip(request: Request) -> str:
 
 
 limiter = Limiter(key_func=get_client_ip)
+
+# ─── Account Lockout Tracking ────────────────────────────────────
+# In-memory: {username: {"count": int, "locked_until": float}}
+failed_attempts = {}
+
+LOCKOUT_MAX_ATTEMPTS = 5
+LOCKOUT_DURATION_SECONDS = 15 * 60  # 15 minutes
+
+
+def _is_locked_out(username: str) -> bool:
+    """Check if an account is currently locked out."""
+    info = failed_attempts.get(username)
+    if not info:
+        return False
+    if info["count"] >= LOCKOUT_MAX_ATTEMPTS:
+        if time.time() < info["locked_until"]:
+            return True
+        # Lockout expired — reset
+        del failed_attempts[username]
+    return False
+
+
+def _record_failed_attempt(username: str):
+    """Record a failed login attempt. Locks out after LOCKOUT_MAX_ATTEMPTS."""
+    now = time.time()
+    if username not in failed_attempts:
+        failed_attempts[username] = {"count": 1, "locked_until": 0}
+    else:
+        info = failed_attempts[username]
+        # If previous lockout expired, reset counter
+        if info["count"] >= LOCKOUT_MAX_ATTEMPTS and now >= info["locked_until"]:
+            failed_attempts[username] = {"count": 1, "locked_until": 0}
+        else:
+            info["count"] += 1
+            if info["count"] >= LOCKOUT_MAX_ATTEMPTS:
+                info["locked_until"] = now + LOCKOUT_DURATION_SECONDS
+
+
+def _reset_failed_attempts(username: str):
+    """Clear failed attempts on successful login."""
+    failed_attempts.pop(username, None)
+
+
+# ─── Email Service Import ────────────────────────────────────────
+from app.services.email_service import send_email
 
 DEPARTMENTS = [
     ("Health Department", "HEALTH"),
@@ -207,13 +256,31 @@ async def login_submit(
     password: str = Form(...),
     db: AsyncSession = Depends(get_db),
 ):
+    # Check account lockout
+    if _is_locked_out(username):
+        remaining = int(failed_attempts[username]["locked_until"] - time.time())
+        minutes = remaining // 60
+        seconds = remaining % 60
+        time_str = f"{minutes} minute{'s' if minutes != 1 else ''}" if minutes else f"{seconds} second{'s' if seconds != 1 else ''}"
+        return templates.TemplateResponse("login.html", {
+            "request": request,
+            "error": f"Account temporarily locked due to too many failed attempts. Please try again in {time_str}.",
+        })
+
     result = await db.execute(select(User).where(User.username == username))
     user = result.scalar_one_or_none()
 
     if not user or not verify_password(password, user.password_hash):
+        _record_failed_attempt(username)
+        attempts_left = LOCKOUT_MAX_ATTEMPTS - failed_attempts.get(username, {}).get("count", 0)
+        if attempts_left <= 0:
+            return templates.TemplateResponse("login.html", {
+                "request": request,
+                "error": "Account temporarily locked due to too many failed attempts. Please try again in 15 minutes.",
+            })
         return templates.TemplateResponse("login.html", {
             "request": request,
-            "error": "Invalid username or password",
+            "error": f"Invalid username or password. {max(attempts_left - 1, 0)} attempt{'s' if attempts_left - 1 != 1 else ''} remaining before lockout.",
         })
 
     if not user.is_active:
@@ -222,7 +289,14 @@ async def login_submit(
             "error": "Account is disabled",
         })
 
-    token = create_session_token(user.id, user.role)
+    # Successful login — reset lockout counter
+    _reset_failed_attempts(username)
+
+    # Extract client info for session binding
+    client_ip = get_client_ip(request)
+    user_agent = request.headers.get("user-agent", "")
+
+    token = create_session_token(user.id, user.role, ip_address=client_ip, user_agent=user_agent)
     response = RedirectResponse(url="/dashboard", status_code=303)
     response.set_cookie("session", token, max_age=settings.SESSION_MAX_AGE, httponly=True, secure=True, samesite="lax")
     return response
@@ -244,6 +318,14 @@ async def register_submit(
     phone: str = Form(""),
     db: AsyncSession = Depends(get_db),
 ):
+    # Password policy validation
+    pw_error = validate_password_policy(password)
+    if pw_error:
+        return templates.TemplateResponse("register.html", {
+            "request": request,
+            "error": pw_error,
+        })
+
     # Check duplicate
     result = await db.execute(select(User).where(User.username == username))
     if result.scalar_one_or_none():
@@ -274,6 +356,119 @@ async def logout():
     response = RedirectResponse(url="/login", status_code=303)
     response.delete_cookie("session")
     return response
+
+
+# ═══════════════════════════════════════════════════════════════════
+# FORGOT / RESET PASSWORD
+# ═══════════════════════════════════════════════════════════════════
+
+@app.get("/forgot-password", response_class=HTMLResponse)
+async def forgot_password_page(request: Request):
+    return templates.TemplateResponse("forgot_password.html", {"request": request})
+
+
+@app.post("/forgot-password")
+@limiter.limit("3/minute")
+async def forgot_password_submit(
+    request: Request,
+    email: str = Form(...),
+    db: AsyncSession = Depends(get_db),
+):
+    """Generate a password reset token and send email (if configured)."""
+    result = await db.execute(select(User).where(User.email == email))
+    user = result.scalar_one_or_none()
+
+    # Always show the same message to prevent email enumeration
+    success_msg = "If an account with that email exists, a password reset link has been sent."
+    if user and user.email:
+        token = generate_password_reset_token(user.id)
+        reset_url = f"{request.base_url.scheme}://{request.base_url.netloc}/reset-password/{token}"
+
+        # Send reset email (gracefully skips if API not configured)
+        await send_email(
+            to_email=user.email,
+            subject="Reset Your Password — Sindh IT Ticket System",
+            template_name="password_reset.html",
+            context={
+                "user_name": user.full_name,
+                "reset_url": reset_url,
+                "system_name": settings.APP_NAME,
+            },
+        )
+
+    return templates.TemplateResponse("forgot_password.html", {
+        "request": request,
+        "success": success_msg,
+    })
+
+
+@app.get("/reset-password/{token}", response_class=HTMLResponse)
+async def reset_password_page(request: Request, token: str):
+    user_id = verify_password_reset_token(token)
+    if user_id is None:
+        return templates.TemplateResponse("reset_password.html", {
+            "request": request,
+            "error": "This password reset link is invalid or has expired. Please request a new one.",
+            "token_invalid": True,
+        })
+    return templates.TemplateResponse("reset_password.html", {
+        "request": request,
+        "token": token,
+    })
+
+
+@app.post("/reset-password/{token}")
+@limiter.limit("5/minute")
+async def reset_password_submit(
+    request: Request,
+    token: str,
+    password: str = Form(...),
+    confirm_password: str = Form(...),
+    db: AsyncSession = Depends(get_db),
+):
+    user_id = verify_password_reset_token(token)
+    if user_id is None:
+        return templates.TemplateResponse("reset_password.html", {
+            "request": request,
+            "error": "This password reset link is invalid or has expired. Please request a new one.",
+            "token_invalid": True,
+        })
+
+    if password != confirm_password:
+        return templates.TemplateResponse("reset_password.html", {
+            "request": request,
+            "token": token,
+            "error": "Passwords do not match.",
+        })
+
+    # Password policy validation
+    pw_error = validate_password_policy(password)
+    if pw_error:
+        return templates.TemplateResponse("reset_password.html", {
+            "request": request,
+            "token": token,
+            "error": pw_error,
+        })
+
+    # Update password
+    user = await db.get(User, user_id)
+    if not user:
+        return templates.TemplateResponse("reset_password.html", {
+            "request": request,
+            "error": "User not found.",
+            "token_invalid": True,
+        })
+
+    user.password_hash = hash_password(password)
+    await db.commit()
+
+    # Invalidate the token
+    invalidate_password_reset_token(token)
+
+    return templates.TemplateResponse("login.html", {
+        "request": request,
+        "success": "Your password has been reset successfully. You can now sign in.",
+    })
 
 
 @app.get("/track", response_class=HTMLResponse)
