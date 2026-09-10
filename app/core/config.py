@@ -16,6 +16,11 @@ class Settings(BaseSettings):
     UPLOAD_DIR: str = "./uploads"
     MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024  # 10MB
     RATE_LIMIT_LOGIN: str = "5/minute"
+    # Email (Brevo transactional email API)
+    BREVO_API_KEY: str = ""
+    BREVO_SENDER_EMAIL: str = "noreply@sindh-it-ticket.14.jugaar.ai"
+    EMAIL_FROM_NAME: str = "Sindh IT Ticket System"
+    MINISTER_EMAIL: str = ""
 
     class Config:
         env_file = ".env"

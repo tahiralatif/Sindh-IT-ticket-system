@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manage Announcements — Sindh IT Ticket System</title>
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div class="top-bar">
+  <div class="top-bar-inner">
+    <a href="/dashboard" class="top-bar-link"><i class="fas fa-arrow-left"></i> Dashboard</a>
+    <a href="/admin/tickets" class="top-bar-link"><i class="fas fa-ticket-alt"></i> Tickets</a>
+    <a href="/admin/users" class="top-bar-link"><i class="fas fa-users"></i> Users</a>
+    <a href="/admin/analytics" class="top-bar-link"><i class="fas fa-chart-bar"></i> Analytics</a>
+    <a href="/admin/announcements" class="top-bar-link active"><i class="fas fa-bullhorn"></i> Announcements</a>
+  </div>
+</div>
+
+<header class="header">
+  <div class="header-inner">
+    <div class="header-left">
+      <a href="/dashboard" class="header-logo">🏛️ Sindh IT System</a>
+      <h1 class="header-title">Manage Announcements</h1>
+    </div>
+    <div class="header-right">
+      <div class="header-notif">
+        <a href="/notifications" class="notif-link">
+          <i class="fas fa-bell"></i>
+          {% if unread_count %}<span class="notif-badge">{{ unread_count }}</span>{% endif %}
+        </a>
+      </div>
+      <div class="header-user">
+        <span>{{ user.full_name if user.full_name else user.username }}</span>
+        <a href="/logout" class="btn-logout">Logout</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="main-content">
+  <div class="container">
+
+    <!-- Create Form -->
+    <div class="card" style="margin-bottom: 24px;">
+      <div class="card-header">
+        <h2><i class="fas fa-plus-circle"></i> New Announcement</h2>
+      </div>
+      <div class="card-body">
+        <form method="POST" action="/admin/announcements/create">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div>
+              <label style="display:block;font-weight:600;margin-bottom:4px;">Title *</label>
+              <input type="text" name="title" required maxlength="200" placeholder="Announcement title"
+                     style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;">
+            </div>
+            <div>
+              <label style="display:block;font-weight:600;margin-bottom:4px;">Priority</label>
+              <select name="priority" style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;">
+                <option value="normal">Normal</option>
+                <option value="high">Important</option>
+                <option value="urgent">Urgent</option>
+              </select>
+            </div>
+          </div>
+          <div style="margin-top:12px;">
+            <label style="display:block;font-weight:600;margin-bottom:4px;">Body *</label>
+            <textarea name="body" required rows="3" placeholder="Announcement content..."
+                      style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;"></textarea>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px;">
+            <div>
+              <label style="display:block;font-weight:600;margin-bottom:4px;">Image URL (optional)</label>
+              <input type="url" name="image_url" placeholder="https://..."
+                     style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px;">
+            </div>
+            <div style="display:flex;align-items:end;gap:16px;padding-bottom:2px;">
+              <label style="display:flex;align-items:center;gap:6px;font-weight:600;cursor:pointer;">
+                <input type="checkbox" name="is_pinned" value="true" style="width:18px;height:18px;">
+                📌 Pin as top alert banner
+              </label>
+            </div>
+          </div>
+          <div style="margin-top:16px;">
+            <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i> Publish Announcement</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Announcements List -->
+    <div class="card">
+      <div class="card-header">
+        <h2><i class="fas fa-list"></i> All Announcements ({{ announcements|length }})</h2>
+      </div>
+      <div class="card-body" style="padding:0;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Status</th>
+              <th>Title</th>
+              <th>Priority</th>
+              <th>Pinned</th>
+              <th>Created</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for ann in announcements %}
+            <tr>
+              <td>
+                {% if ann.is_active %}
+                  <span style="color:#16a34a;font-weight:600;">● Active</span>
+                {% else %}
+                  <span style="color:#9ca3af;font-weight:600;">● Inactive</span>
+                {% endif %}
+              </td>
+              <td style="font-weight:600;">{{ ann.title[:60] }}{% if ann.title|length > 60 %}...{% endif %}</td>
+              <td>
+                {% if ann.priority == 'urgent' %}
+                  <span style="background:#fef2f2;color:#dc2626;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600;">URGENT</span>
+                {% elif ann.priority == 'high' %}
+                  <span style="background:#fff7ed;color:#ea580c;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600;">HIGH</span>
+                {% else %}
+                  <span style="background:#e8f5e9;color:#006233;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600;">NORMAL</span>
+                {% endif %}
+              </td>
+              <td>{% if ann.is_pinned %}📌{% else %}—{% endif %}</td>
+              <td>{{ ann.created_at.strftime('%Y-%m-%d %H:%M') if ann.created_at else '—' }}</td>
+              <td>
+                <div style="display:flex;gap:6px;">
+                  <form method="POST" action="/admin/announcements/{{ ann.id }}/toggle" style="display:inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+                    <button type="submit" class="btn" style="padding:4px 10px;font-size:12px;{% if ann.is_active %}color:#dc2626;{% else %}color:#16a34a;{% endif %}">
+                      {% if ann.is_active %}Deactivate{% else %}Activate{% endif %}
+                    </button>
+                  </form>
+                  <form method="POST" action="/admin/announcements/{{ ann.id }}/pin" style="display:inline;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+                    <button type="submit" class="btn" style="padding:4px 10px;font-size:12px;color:#c8a951;">
+                      {% if ann.is_pinned %}Unpin{% else %}Pin{% endif %}
+                    </button>
+                  </form>
+                  <form method="POST" action="/admin/announcements/{{ ann.id }}/delete" style="display:inline;"
+                        onsubmit="return confirm('Delete this announcement permanently?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token(request) }}">
+                    <button type="submit" class="btn" style="padding:4px 10px;font-size:12px;color:#dc2626;">
+                      Delete
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+            {% if not announcements %}
+            <tr><td colspan="6" style="text-align:center;padding:40px;color:#9ca3af;">No announcements yet. Create one above.</td></tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</main>
+</body>
+</html>

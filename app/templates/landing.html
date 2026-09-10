@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sindh IT Complaint Portal — Government of Sindh</title>
+<meta name="description" content="File and track citizen complaints with the Government of Sindh. AI-powered routing to the right department.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+:root {
+  --primary: #006233;
+  --primary-dark: #004d26;
+  --primary-light: #e8f5e9;
+  --navy: #1a237e;
+  --navy-light: #283593;
+  --gold: #c8a951;
+  --gold-light: #f5e6b8;
+  --white: #ffffff;
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-300: #d1d5db;
+  --gray-500: #6b7280;
+  --gray-700: #374151;
+  --gray-900: #111827;
+  --red: #dc2626;
+  --red-light: #fef2f2;
+  --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.06);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.1), 0 4px 6px rgba(0,0,0,0.05);
+  --shadow-xl: 0 20px 25px rgba(0,0,0,0.1), 0 10px 10px rgba(0,0,0,0.04);
+  --radius: 12px;
+  --radius-lg: 16px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', -apple-system, sans-serif; color: var(--gray-900); line-height: 1.6; background: var(--white); overflow-x: hidden; }
+a { color: var(--primary); text-decoration: none; }
+img { max-width: 100%; height: auto; }
+
+/* ─── Scroll Animation Base ─── */
+.fade-up { opacity: 0; transform: translateY(30px); transition: opacity 0.6s ease, transform 0.6s ease; }
+.fade-up.visible { opacity: 1; transform: translateY(0); }
+.fade-left { opacity: 0; transform: translateX(-30px); transition: opacity 0.6s ease, transform 0.6s ease; }
+.fade-left.visible { opacity: 1; transform: translateX(0); }
+.fade-right { opacity: 0; transform: translateX(30px); transition: opacity 0.6s ease, transform 0.6s ease; }
+.fade-right.visible { opacity: 1; transform: translateX(0); }
+.delay-1 { transition-delay: 0.1s; }
+.delay-2 { transition-delay: 0.2s; }
+.delay-3 { transition-delay: 0.3s; }
+.delay-4 { transition-delay: 0.4s; }
+
+/* ─── Alert Banner ─── */
+.alert-banner {
+  background: linear-gradient(135deg, var(--red) 0%, #b91c1c 100%);
+  color: white; padding: 12px 20px; text-align: center;
+  font-size: 14px; font-weight: 500; position: relative; z-index: 100;
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+}
+.alert-banner.hidden { display: none; }
+.alert-banner i { font-size: 16px; animation: pulse-icon 2s infinite; }
+@keyframes pulse-icon { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+.alert-banner .dismiss {
+  background: none; border: 1px solid rgba(255,255,255,0.4); color: white;
+  padding: 4px 12px; border-radius: 20px; cursor: pointer; font-size: 12px;
+  font-weight: 600; transition: background 0.2s;
+}
+.alert-banner .dismiss:hover { background: rgba(255,255,255,0.2); }
+
+/* ─── Navbar ─── */
+.navbar {
+  background: var(--white); border-bottom: 1px solid var(--gray-200);
+  padding: 0 24px; height: 64px; display: flex; align-items: center;
+  justify-content: space-between; position: sticky; top: 0; z-index: 90;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.navbar-brand { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 18px; color: var(--navy); }
+.navbar-brand img { height: 36px; width: 36px; border-radius: 8px; }
+.navbar-brand .govt-tag { font-size: 11px; color: var(--gray-500); font-weight: 500; display: block; margin-top: -2px; }
+.navbar-actions { display: flex; align-items: center; gap: 12px; }
+.btn {
+  padding: 10px 20px; border-radius: 8px; font-weight: 600; font-size: 14px;
+  border: none; cursor: pointer; transition: all 0.2s; display: inline-flex;
+  align-items: center; gap: 8px; text-decoration: none;
+}
+.btn-primary { background: var(--primary); color: white; }
+.btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+.btn-outline { background: transparent; border: 2px solid var(--navy); color: var(--navy); }
+.btn-outline:hover { background: var(--navy); color: white; }
+.btn-gold { background: var(--gold); color: var(--navy); }
+.btn-gold:hover { background: #b89a42; }
+.btn-lg { padding: 14px 28px; font-size: 16px; border-radius: 10px; }
+
+/* ─── Hero Carousel ─── */
+.hero {
+  position: relative; height: 520px; overflow: hidden; background: var(--navy);
+}
+.hero-slides { position: relative; width: 100%; height: 100%; }
+.hero-slide {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  opacity: 0; transition: opacity 0.8s ease;
+  display: flex; align-items: center; justify-content: center;
+}
+.hero-slide.active { opacity: 1; z-index: 1; }
+.hero-slide-bg {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+}
+.hero-slide-content {
+  position: relative; z-index: 2; text-align: center; color: white;
+  max-width: 720px; padding: 0 24px;
+}
+.hero-slide-content h1 {
+  font-size: 42px; font-weight: 800; line-height: 1.15; margin-bottom: 16px;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+.hero-slide-content p {
+  font-size: 18px; opacity: 0.9; margin-bottom: 28px; line-height: 1.6;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+.hero-dots {
+  position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 10px; z-index: 10;
+}
+.hero-dot {
+  width: 12px; height: 12px; border-radius: 50%; background: rgba(255,255,255,0.4);
+  cursor: pointer; transition: all 0.3s; border: 2px solid transparent;
+}
+.hero-dot.active { background: var(--gold); border-color: var(--gold); transform: scale(1.2); }
+.hero-arrows {
+  position: absolute; top: 50%; transform: translateY(-50%); width: 100%;
+  display: flex; justify-content: space-between; padding: 0 20px; z-index: 10;
+}
+.hero-arrow {
+  background: rgba(255,255,255,0.15); border: none; color: white;
+  width: 44px; height: 44px; border-radius: 50%; cursor: pointer;
+  font-size: 18px; transition: background 0.2s; backdrop-filter: blur(4px);
+}
+.hero-arrow:hover { background: rgba(255,255,255,0.3); }
+
+/* ─── Stats Section ─── */
+.stats-section { padding: 60px 24px; background: var(--gray-50); }
+.stats-section h2 { text-align: center; font-size: 28px; font-weight: 700; color: var(--navy); margin-bottom: 40px; }
+.stats-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px;
+  max-width: 900px; margin: 0 auto;
+}
+.stat-card {
+  background: white; border-radius: var(--radius); padding: 32px 20px;
+  text-align: center; box-shadow: var(--shadow); transition: transform 0.3s, box-shadow 0.3s;
+  border-top: 3px solid var(--primary);
+}
+.stat-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+.stat-card:nth-child(2) { border-top-color: var(--navy); }
+.stat-card:nth-child(3) { border-top-color: var(--gold); }
+.stat-card:nth-child(4) { border-top-color: var(--primary); }
+.stat-icon { font-size: 32px; color: var(--primary); margin-bottom: 12px; }
+.stat-card:nth-child(2) .stat-icon { color: var(--navy); }
+.stat-card:nth-child(3) .stat-icon { color: var(--gold); }
+.stat-number { font-size: 40px; font-weight: 800; color: var(--navy); line-height: 1; margin-bottom: 8px; }
+.stat-label { font-size: 14px; color: var(--gray-500); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* ─── How It Works ─── */
+.how-section { padding: 80px 24px; }
+.how-section h2 { text-align: center; font-size: 28px; font-weight: 700; color: var(--navy); margin-bottom: 12px; }
+.how-section .subtitle { text-align: center; color: var(--gray-500); margin-bottom: 48px; font-size: 16px; }
+.steps-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px;
+  max-width: 1000px; margin: 0 auto;
+}
+.step-card { text-align: center; position: relative; }
+.step-number {
+  width: 56px; height: 56px; border-radius: 50%; background: var(--primary-light);
+  color: var(--primary); font-size: 22px; font-weight: 700; display: flex;
+  align-items: center; justify-content: center; margin: 0 auto 16px;
+}
+.step-card:nth-child(2) .step-number { background: #e8eaf6; color: var(--navy); }
+.step-card:nth-child(3) .step-number { background: var(--gold-light); color: #92700c; }
+.step-card:nth-child(4) .step-number { background: var(--primary-light); color: var(--primary); }
+.step-card h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; color: var(--gray-900); }
+.step-card p { font-size: 14px; color: var(--gray-500); line-height: 1.6; }
+
+/* ─── Announcements ─── */
+.announcements-section { padding: 60px 24px; background: var(--gray-50); }
+.announcements-section h2 { text-align: center; font-size: 28px; font-weight: 700; color: var(--navy); margin-bottom: 12px; }
+.announcements-section .subtitle { text-align: center; color: var(--gray-500); margin-bottom: 32px; }
+.ticker-wrap {
+  max-width: 900px; margin: 0 auto; overflow: hidden; position: relative;
+  background: white; border-radius: var(--radius); box-shadow: var(--shadow);
+  border: 1px solid var(--gray-200);
+}
+.ticker {
+  display: flex; transition: transform 0.5s ease;
+}
+.ticker-item {
+  min-width: 100%; padding: 32px 40px;
+}
+.ticker-item .badge {
+  display: inline-block; padding: 4px 12px; border-radius: 20px;
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+  margin-bottom: 12px;
+}
+.badge-urgent { background: var(--red-light); color: var(--red); }
+.badge-high { background: #fff7ed; color: #ea580c; }
+.badge-normal { background: var(--primary-light); color: var(--primary); }
+.ticker-item h3 { font-size: 18px; font-weight: 700; color: var(--gray-900); margin-bottom: 8px; }
+.ticker-item p { font-size: 14px; color: var(--gray-500); line-height: 1.7; }
+.ticker-item .date { font-size: 12px; color: var(--gray-300); margin-top: 12px; }
+.ticker-nav {
+  display: flex; justify-content: center; gap: 8px; padding: 16px;
+  background: white; border-top: 1px solid var(--gray-100);
+}
+.ticker-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--gray-300);
+  cursor: pointer; transition: all 0.3s;
+}
+.ticker-dot.active { background: var(--primary); width: 24px; border-radius: 4px; }
+
+/* ─── Departments ─── */
+.depts-section { padding: 80px 24px; }
+.depts-section h2 { text-align: center; font-size: 28px; font-weight: 700; color: var(--navy); margin-bottom: 40px; }
+.depts-grid {
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px;
+  max-width: 1000px; margin: 0 auto;
+}
+.dept-card {
+  background: white; border: 1px solid var(--gray-200); border-radius: var(--radius);
+  padding: 20px 16px; text-align: center; transition: all 0.2s;
+  cursor: default;
+}
+.dept-card:hover { border-color: var(--primary); box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.dept-card i { font-size: 24px; color: var(--primary); margin-bottom: 10px; display: block; }
+.dept-card span { font-size: 13px; font-weight: 600; color: var(--gray-700); }
+
+/* ─── CTA Section ─── */
+.cta-section {
+  padding: 80px 24px;
+  background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 50%, var(--primary-dark) 100%);
+  text-align: center; color: white;
+}
+.cta-section h2 { font-size: 32px; font-weight: 800; margin-bottom: 16px; }
+.cta-section p { font-size: 17px; opacity: 0.85; margin-bottom: 32px; max-width: 600px; margin-left: auto; margin-right: auto; }
+.cta-buttons { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+.btn-white { background: white; color: var(--navy); }
+.btn-white:hover { background: var(--gray-100); transform: translateY(-1px); }
+.btn-ghost { background: transparent; border: 2px solid rgba(255,255,255,0.5); color: white; }
+.btn-ghost:hover { border-color: white; background: rgba(255,255,255,0.1); }
+
+/* ─── Footer ─── */
+.footer {
+  background: var(--gray-900); color: var(--gray-300); padding: 40px 24px 24px;
+}
+.footer-inner { max-width: 1000px; margin: 0 auto; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 24px; }
+.footer-brand { max-width: 300px; }
+.footer-brand h3 { color: white; font-size: 16px; margin-bottom: 8px; }
+.footer-brand p { font-size: 13px; line-height: 1.6; }
+.footer-links h4 { color: white; font-size: 14px; margin-bottom: 12px; }
+.footer-links a { display: block; color: var(--gray-300); font-size: 13px; padding: 3px 0; transition: color 0.2s; }
+.footer-links a:hover { color: var(--gold); }
+.footer-bottom {
+  max-width: 1000px; margin: 24px auto 0; padding-top: 20px;
+  border-top: 1px solid rgba(255,255,255,0.1); text-align: center;
+  font-size: 12px; color: var(--gray-500);
+}
+
+/* ─── Mobile ─── */
+@media (max-width: 768px) {
+  .hero { height: 420px; }
+  .hero-slide-content h1 { font-size: 26px; }
+  .hero-slide-content p { font-size: 15px; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .stat-number { font-size: 32px; }
+  .steps-grid { grid-template-columns: repeat(2, 1fr); gap: 24px; }
+  .depts-grid { grid-template-columns: repeat(3, 1fr); }
+  .navbar { padding: 0 16px; }
+  .navbar-brand { font-size: 15px; }
+  .btn-lg { padding: 12px 24px; font-size: 14px; }
+}
+@media (max-width: 480px) {
+  .hero { height: 360px; }
+  .hero-slide-content h1 { font-size: 22px; }
+  .steps-grid { grid-template-columns: 1fr; }
+  .depts-grid { grid-template-columns: repeat(2, 1fr); }
+  .cta-section h2 { font-size: 24px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Alert Banner (pinned announcements) -->
+{% for ann in announcements %}
+  {% if ann.is_pinned %}
+  <div class="alert-banner" id="alert-banner-{{ ann.id }}">
+    <i class="fas fa-exclamation-triangle"></i>
+    <span><strong>{{ ann.title }}</strong> — {{ ann.body[:120] }}{% if ann.body|length > 120 %}...{% endif %}</span>
+    <button class="dismiss" onclick="dismissAlert({{ ann.id }})">Dismiss</button>
+  </div>
+  {% endif %}
+{% endfor %}
+
+<!-- Navbar -->
+<nav class="navbar">
+  <a href="/" class="navbar-brand">
+    <div style="width:36px;height:36px;background:var(--navy);border-radius:8px;display:flex;align-items:center;justify-content:center;">
+      <span style="color:var(--gold);font-size:18px;font-weight:800;">PK</span>
+    </div>
+    <div>
+      Sindh IT Portal
+      <span class="govt-tag">Science & IT Department</span>
+    </div>
+  </a>
+  <div class="navbar-actions">
+    <a href="/track" class="btn btn-outline" style="padding:8px 16px;font-size:13px;">
+      <i class="fas fa-search"></i> Track Ticket
+    </a>
+    <a href="/login" class="btn btn-primary" style="padding:8px 20px;font-size:13px;">
+      <i class="fas fa-sign-in-alt"></i> Login
+    </a>
+  </div>
+</nav>
+
+<!-- Hero Carousel -->
+<section class="hero">
+  <div class="hero-slides" id="heroSlides">
+    <!-- Slide 1 -->
+    <div class="hero-slide active">
+      <div class="hero-slide-bg" style="background: linear-gradient(135deg, var(--navy) 0%, var(--primary-dark) 60%, var(--primary) 100%);"></div>
+      <div class="hero-slide-content">
+        <h1>Your Voice Matters.<br>File a Complaint Today.</h1>
+        <p>Submit citizen complaints online with AI-powered routing that connects you directly to the right government department.</p>
+        <a href="/register" class="btn btn-gold btn-lg"><i class="fas fa-paper-plane"></i> Submit Complaint</a>
+      </div>
+    </div>
+    <!-- Slide 2 -->
+    <div class="hero-slide">
+      <div class="hero-slide-bg" style="background: linear-gradient(135deg, var(--primary-dark) 0%, var(--navy) 100%);"></div>
+      <div class="hero-slide-content">
+        <h1>Track Your Complaint<br>in Real Time</h1>
+        <p>Get instant updates on your complaint status. No more wondering — see exactly where your case stands.</p>
+        <a href="/track" class="btn btn-gold btn-lg"><i class="fas fa-map-marker-alt"></i> Track Status</a>
+      </div>
+    </div>
+    <!-- Slide 3 -->
+    <div class="hero-slide">
+      <div class="hero-slide-bg" style="background: linear-gradient(135deg, #1a237e 0%, #283593 50%, var(--primary) 100%);"></div>
+      <div class="hero-slide-content">
+        <h1>AI-Powered.<br>Fast Resolution.</h1>
+        <p>Our intelligent system automatically routes your complaint to the correct department, reducing response time from weeks to days.</p>
+        <a href="/register" class="btn btn-gold btn-lg"><i class="fas fa-robot"></i> Try AI Chat</a>
+      </div>
+    </div>
+    <!-- Slide 4 -->
+    <div class="hero-slide">
+      <div class="hero-slide-bg" style="background: linear-gradient(135deg, var(--primary) 0%, #004d26 100%);"></div>
+      <div class="hero-slide-content">
+        <h1>Transparent.<br>Accountable. Digital.</h1>
+        <p>A modern, transparent system for government-citizen interaction. Every complaint is tracked and every resolution is recorded.</p>
+        <a href="/register" class="btn btn-gold btn-lg"><i class="fas fa-shield-alt"></i> Get Started</a>
+      </div>
+    </div>
+  </div>
+  <div class="hero-arrows">
+    <button class="hero-arrow" onclick="prevSlide()"><i class="fas fa-chevron-left"></i></button>
+    <button class="hero-arrow" onclick="nextSlide()"><i class="fas fa-chevron-right"></i></button>
+  </div>
+  <div class="hero-dots" id="heroDots">
+    <div class="hero-dot active" onclick="goToSlide(0)"></div>
+    <div class="hero-dot" onclick="goToSlide(1)"></div>
+    <div class="hero-dot" onclick="goToSlide(2)"></div>
+    <div class="hero-dot" onclick="goToSlide(3)"></div>
+  </div>
+</section>
+
+<!-- Live Stats -->
+<section class="stats-section fade-up">
+  <h2>System at a Glance</h2>
+  <div class="stats-grid">
+    <div class="stat-card fade-up delay-1">
+      <div class="stat-icon"><i class="fas fa-ticket-alt"></i></div>
+      <div class="stat-number" data-target="{{ total }}">0</div>
+      <div class="stat-label">Total Complaints</div>
+    </div>
+    <div class="stat-card fade-up delay-2">
+      <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+      <div class="stat-number" data-target="{{ resolved }}">0</div>
+      <div class="stat-label">Resolved</div>
+    </div>
+    <div class="stat-card fade-up delay-3">
+      <div class="stat-icon"><i class="fas fa-spinner"></i></div>
+      <div class="stat-number" data-target="{{ in_progress }}">0</div>
+      <div class="stat-label">In Progress</div>
+    </div>
+    <div class="stat-card fade-up delay-4">
+      <div class="stat-icon"><i class="fas fa-city"></i></div>
+      <div class="stat-number" data-target="{{ cities }}">0</div>
+      <div class="stat-label">Cities Covered</div>
+    </div>
+  </div>
+</section>
+
+<!-- How It Works -->
+<section class="how-section">
+  <h2 class="fade-up">How It Works</h2>
+  <p class="subtitle fade-up">Four simple steps to get your complaint heard</p>
+  <div class="steps-grid">
+    <div class="step-card fade-up delay-1">
+      <div class="step-number">1</div>
+      <h3>Register</h3>
+      <p>Create a free account with your name and contact details. Takes less than a minute.</p>
+    </div>
+    <div class="step-card fade-up delay-2">
+      <div class="step-number">2</div>
+      <h3>Submit</h3>
+      <p>Describe your complaint in your own words. Our AI helps categorize and route it correctly.</p>
+    </div>
+    <div class="step-card fade-up delay-3">
+      <div class="step-number">3</div>
+      <h3>Track</h3>
+      <p>Monitor progress in real-time. Get notifications when your complaint status changes.</p>
+    </div>
+    <div class="step-card fade-up delay-4">
+      <div class="step-number">4</div>
+      <h3>Resolve</h3>
+      <p>Receive resolution confirmation. Rate the service to help us improve.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Announcements Ticker -->
+{% if announcements|selectattr('is_active')|list|length > 0 %}
+<section class="announcements-section fade-up">
+  <h2 class="fade-up">Latest Announcements</h2>
+  <p class="subtitle fade-up">Stay informed about system updates and important notices</p>
+  <div class="ticker-wrap fade-up" id="tickerWrap">
+    <div class="ticker" id="ticker">
+      {% for ann in announcements %}
+        {% if ann.is_active %}
+        <div class="ticker-item">
+          <span class="badge {% if ann.priority == 'urgent' %}badge-urgent{% elif ann.priority == 'high' %}badge-high{% else %}badge-normal{% endif %}">
+            {% if ann.priority == 'urgent' %}<i class="fas fa-exclamation-circle"></i> Urgent{% elif ann.priority == 'high' %}<i class="fas fa-arrow-up"></i> Important{% else %}Announcement{% endif %}
+          </span>
+          <h3>{{ ann.title }}</h3>
+          <p>{{ ann.body }}</p>
+          <div class="date">{{ ann.created_at.strftime('%B %d, %Y') if ann.created_at else '' }}</div>
+        </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+    <div class="ticker-nav" id="tickerNav">
+      {% for ann in announcements %}
+        {% if ann.is_active %}
+        <div class="ticker-dot {% if loop.first %}active{% endif %}" onclick="goToTicker({{ loop.index0 }})"></div>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<!-- Departments -->
+<section class="depts-section fade-up">
+  <h2 class="fade-up">Departments We Serve</h2>
+  <div class="depts-grid">
+    <div class="dept-card fade-up delay-1"><i class="fas fa-heartbeat"></i><span>Health</span></div>
+    <div class="dept-card fade-up delay-1"><i class="fas fa-graduation-cap"></i><span>Education</span></div>
+    <div class="dept-card fade-up delay-2"><i class="fas fa-bus"></i><span>Transport</span></div>
+    <div class="dept-card fade-up delay-2"><i class="fas fa-file-invoice-dollar"></i><span>Revenue</span></div>
+    <div class="dept-card fade-up delay-3"><i class="fas fa-shield-alt"></i><span>Police</span></div>
+    <div class="dept-card fade-up delay-3"><i class="fas fa-id-card"></i><span>Excise & Tax</span></div>
+    <div class="dept-card fade-up delay-4"><i class="fas fa-hands-helping"></i><span>Social Welfare</span></div>
+    <div class="dept-card fade-up delay-4"><i class="fas fa-desktop"></i><span>Information</span></div>
+    <div class="dept-card fade-up delay-3"><i class="fas fa-tools"></i><span>Works & Services</span></div>
+    <div class="dept-card fade-up delay-4"><i class="fas fa-seedling"></i><span>Agriculture</span></div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section fade-up">
+  <h2 class="fade-up">Ready to Make a Difference?</h2>
+  <p class="fade-up">Join thousands of citizens using the digital complaint system to hold government accountable.</p>
+  <div class="cta-buttons fade-up">
+    <a href="/register" class="btn btn-white btn-lg"><i class="fas fa-user-plus"></i> Create Account</a>
+    <a href="/track" class="btn btn-ghost btn-lg"><i class="fas fa-search"></i> Track Complaint</a>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <h3>Sindh IT Complaint Portal</h3>
+      <p>A digital initiative by the Science & Information Technology Department, Government of Sindh for transparent citizen grievance redressal.</p>
+    </div>
+    <div class="footer-links">
+      <h4>Quick Links</h4>
+      <a href="/register">Register</a>
+      <a href="/login">Login</a>
+      <a href="/track">Track Complaint</a>
+    </div>
+    <div class="footer-links">
+      <h4>Departments</h4>
+      <a href="/register">Health</a>
+      <a href="/register">Education</a>
+      <a href="/register">Transport</a>
+      <a href="/register">Revenue</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    &copy; 2026 Government of Sindh — Science & IT Department. All rights reserved.
+  </div>
+</footer>
+
+<script>
+/* ═══ Hero Carousel ═══ */
+let currentSlide = 0;
+const slides = document.querySelectorAll('.hero-slide');
+const dots = document.querySelectorAll('.hero-dot');
+let slideInterval;
+
+function showSlide(n) {
+  slides[currentSlide].classList.remove('active');
+  dots[currentSlide].classList.remove('active');
+  currentSlide = (n + slides.length) % slides.length;
+  slides[currentSlide].classList.add('active');
+  dots[currentSlide].classList.add('active');
+}
+function nextSlide() { showSlide(currentSlide + 1); resetInterval(); }
+function prevSlide() { showSlide(currentSlide - 1); resetInterval(); }
+function goToSlide(n) { showSlide(n); resetInterval(); }
+function resetInterval() { clearInterval(slideInterval); slideInterval = setInterval(nextSlide, 5000); }
+slideInterval = setInterval(nextSlide, 5000);
+
+/* ═══ Ticker ═══ */
+let currentTicker = 0;
+const tickerItems = document.querySelectorAll('.ticker-item');
+const tickerDots = document.querySelectorAll('.ticker-dot');
+let tickerInterval;
+
+function showTicker(n) {
+  if (!tickerItems.length) return;
+  currentTicker = ((n % tickerItems.length) + tickerItems.length) % tickerItems.length;
+  document.getElementById('ticker').style.transform = `translateX(-${currentTicker * 100}%)`;
+  tickerDots.forEach((d, i) => d.classList.toggle('active', i === currentTicker));
+}
+function nextTicker() { showTicker(currentTicker + 1); }
+function goToTicker(n) { showTicker(n); clearInterval(tickerInterval); tickerInterval = setInterval(nextTicker, 6000); }
+tickerInterval = setInterval(nextTicker, 6000);
+
+/* ═══ Scroll Animations ═══ */
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); } });
+}, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+document.querySelectorAll('.fade-up, .fade-left, .fade-right').forEach(el => observer.observe(el));
+
+/* ═══ Animated Counters ═══ */
+function animateCounters() {
+  document.querySelectorAll('.stat-number[data-target]').forEach(el => {
+    const target = parseInt(el.dataset.target) || 0;
+    if (target === 0) return;
+    const duration = 1800;
+    const start = performance.now();
+    function update(now) {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      el.textContent = Math.round(target * eased).toLocaleString();
+      if (progress < 1) requestAnimationFrame(update);
+    }
+    requestAnimationFrame(update);
+  });
+}
+
+/* Start counters when stats section is visible */
+const statsObserver = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) { animateCounters(); statsObserver.unobserve(e.target); }
+  });
+}, { threshold: 0.3 });
+const statsSection = document.querySelector('.stats-section');
+if (statsSection) statsObserver.observe(statsSection);
+
+/* ═══ Live Stats Polling ═══ */
+setInterval(async () => {
+  try {
+    const resp = await fetch('/api/public/stats');
+    if (!resp.ok) return;
+    const data = await resp.json();
+    document.querySelectorAll('.stat-number[data-target]').forEach(el => {
+      const key = el.parentElement.querySelector('.stat-label').textContent.trim();
+      let val = 0;
+      if (key === 'Total Complaints') val = data.total_tickets;
+      else if (key === 'Resolved') val = data.resolved_tickets;
+      else if (key === 'In Progress') val = data.in_progress_tickets;
+      else if (key === 'Cities Covered') val = data.cities_covered;
+      el.dataset.target = val;
+      el.textContent = val.toLocaleString();
+    });
+  } catch(e) {}
+}, 30000);
+
+/* ═══ Dismiss Alert ═══ */
+function dismissAlert(id) {
+  const el = document.getElementById('alert-banner-' + id);
+  if (el) { el.style.transition = 'all 0.3s'; el.style.opacity = '0'; el.style.maxHeight = '0'; el.style.padding = '0'; setTimeout(() => el.classList.add('hidden'), 300); }
+  try { sessionStorage.setItem('dismissed_' + id, '1'); } catch(e) {}
+}
+/* Restore dismissed alerts */
+document.querySelectorAll('.alert-banner').forEach(el => {
+  const id = el.id.replace('alert-banner-', '');
+  if (sessionStorage.getItem('dismissed_' + id)) el.classList.add('hidden');
+});
+
+/* ═══ Live Announcements Polling ═══ */
+setInterval(async () => {
+  try {
+    const resp = await fetch('/api/public/announcements');
+    if (!resp.ok) return;
+    const items = await resp.json();
+    /* Update ticker if count changed */
+    const ticker = document.getElementById('ticker');
+    const tickerNav = document.getElementById('tickerNav');
+    if (!ticker || !tickerNav) return;
+    if (items.length !== document.querySelectorAll('.ticker-item').length) {
+      /* Reload page to pick up new announcements */
+      window.location.reload();
+    }
+  } catch(e) {}
+}, 45000);
+</script>
+</body>
+</html>

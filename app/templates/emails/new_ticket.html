@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; background: #f4f6f8; }
+.container { max-width: 600px; margin: 20px auto; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+.header { background: linear-gradient(135deg, #006233 0%, #1a237e 100%); padding: 28px 32px; color: white; }
+.header h1 { margin: 0; font-size: 22px; font-weight: 600; }
+.header p { margin: 6px 0 0; opacity: 0.85; font-size: 13px; }
+.body { padding: 28px 32px; }
+.ticket-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 18px; margin: 16px 0; }
+.ticket-box .label { font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
+.ticket-box .value { font-size: 15px; color: #111827; margin: 2px 0 12px; font-weight: 500; }
+.ticket-box .value:last-child { margin-bottom: 0; }
+.priority { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; text-transform: uppercase; }
+.priority.critical { background: #fef2f2; color: #dc2626; }
+.priority.high { background: #fff7ed; color: #ea580c; }
+.priority.medium { background: #fefce8; color: #ca8a04; }
+.priority.low { background: #f0fdf4; color: #16a34a; }
+.cta { display: inline-block; background: #006233; color: white !important; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: 600; margin: 16px 0; font-size: 14px; }
+.cta:hover { background: #004d26; }
+.footer { padding: 20px 32px; background: #f9fafb; border-top: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af; text-align: center; }
+.footer a { color: #006233; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>🇵🇰 {{ system_name }}</h1>
+    <p>Science & IT Department — Government of Sindh</p>
+  </div>
+  <div class="body">
+    <h2 style="margin:0 0 8px; color:#111827;">New Complaint Received</h2>
+    <p style="color:#6b7280; margin:0 0 20px;">A citizen has submitted a new complaint that requires your attention.</p>
+
+    <div class="ticket-box">
+      <div class="label">Ticket Number</div>
+      <div class="value">{{ ticket_number }}</div>
+
+      <div class="label">Subject</div>
+      <div class="value">{{ subject }}</div>
+
+      <div class="label">Description</div>
+      <div class="value">{{ description[:300] }}{% if description|length > 300 %}...{% endif %}</div>
+
+      <div class="label">Priority</div>
+      <div class="value"><span class="priority {{ priority }}">{{ priority|upper }}</span></div>
+
+      <div class="label">City</div>
+      <div class="value">{{ city }}</div>
+
+      <div class="label">Service</div>
+      <div class="value">{{ service }}</div>
+
+      <div class="label">Submitted By</div>
+      <div class="value">{{ submitter }}</div>
+
+      <div class="label">AI Department Suggestion</div>
+      <div class="value">{{ ai_dept }}{% if ai_confidence %} ({{ ai_confidence }}% confidence){% endif %}</div>
+    </div>
+
+    <a href="{{ ticket_url }}" class="cta">View Ticket →</a>
+
+    <p style="color:#6b7280; font-size:13px; margin-top:20px;">Please review and assign this ticket to the appropriate department. You can also use the admin chatbot to manage it naturally.</p>
+  </div>
+  <div class="footer">
+    <p>Government of Sindh — Science & IT Department</p>
+    <p>This is an automated notification from <a href="https://sindh-it-ticket.14.jugaar.ai">{{ system_name }}</a></p>
+  </div>
+</div>
+</body>
+</html>

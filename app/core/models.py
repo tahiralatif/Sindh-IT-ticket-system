@@ -115,3 +115,18 @@ class Notification(Base):
     message = Column(Text, default="")
     is_read = Column(Boolean, default=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+
+class Announcement(Base):
+    __tablename__ = "announcements"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(200), nullable=False)
+    body = Column(Text, nullable=False)
+    image_url = Column(String(500), default="")
+    priority = Column(String(20), default="normal")  # normal, high, urgent
+    is_active = Column(Boolean, default=True)
+    is_pinned = Column(Boolean, default=False)  # Shows as top alert banner
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))

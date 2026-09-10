@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.models import User, Department, Ticket, TicketHistory, Attachment, Notification, ChatHistory
 from app.ai.suggest import DEPARTMENTS, suggest_department
+from app.services.notification_service import notify_admin_new_ticket
 
 logger = logging.getLogger(__name__)
 
@@ -184,6 +185,15 @@ async def citizen_chat(user_id: int, message: str, history: list[dict], db: Asyn
             db.add(ticket)
             await db.commit()
             await db.refresh(ticket)
+
+            # Notify admins (same as form-submitted tickets)
+            submitter_user = await db.get(User, user_id)
+            submitter_name = submitter_user.full_name if submitter_user else f"Citizen #{user_id}"
+            try:
+                await notify_admin_new_ticket(db, ticket, submitter_name)
+                await db.commit()
+            except Exception as ne:
+                logger.error(f"Failed to notify admins for chat ticket: {ne}")
 
             reply = (
                 f"✅ Your ticket has been filed successfully!\n\n"

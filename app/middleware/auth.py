@@ -5,8 +5,8 @@ from starlette.responses import RedirectResponse
 from app.core.security import decode_session_token, validate_csrf_token
 
 # Paths that don't require authentication
-PUBLIC_PATHS = {"/login", "/register", "/track", "/logout", "/static"}
-API_PUBLIC = {"/api/suggest-dept", "/api/stats"}
+PUBLIC_PATHS = {"/", "/login", "/register", "/track", "/logout", "/static"}
+API_PUBLIC = {"/api/suggest-dept", "/api/stats", "/api/public/"}
 
 # Paths that don't need CSRF (GET, API, etc.)
 CSRF_EXEMPT_METHODS = {"GET", "HEAD", "OPTIONS"}

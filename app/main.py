@@ -13,12 +13,13 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from slowapi import Limiter
-from slowapi.util import get_remote_address
+from slowapi.util import get_remote_address as _default_get_remote_address
 
 from app.core.config import settings
 from app.core.database import get_db, init_db, async_session
 from app.core.models import (
-    User, Department, Ticket, TicketHistory, Attachment, Notification
+    User, Department, Ticket, TicketHistory, Attachment, Notification,
+    ChatHistory, Announcement
 )
 from app.core.security import (
     hash_password, verify_password, create_session_token,
@@ -27,9 +28,35 @@ from app.core.security import (
 from app.middleware.auth import SessionMiddleware, CSRFMiddleware
 from app.ai.suggest import suggest_department, keyword_fallback
 from app.api.chat import handle_chat, CITIZEN_WELCOME, load_chat_history, clear_chat_history
+from app.services.notification_service import (
+    notify_admin_new_ticket, notify_citizen_status_change
+)
 
 # Rate limiter
-limiter = Limiter(key_func=get_remote_address)
+def get_client_ip(request: Request) -> str:
+    """Extract real client IP. Prioritize X-Real-IP (set by nginx from $remote_addr,
+    cannot be spoofed by client) over X-Forwarded-For (client can prepend fake IPs)."""
+    # X-Real-IP: set by nginx as proxy_set_header X-Real-IP $remote_addr
+    # This is the direct TCP connection IP — cannot be forged by the client
+    xri = request.headers.get("x-real-ip")
+    if xri:
+        return xri.strip()
+    # X-Forwarded-For: client CAN prepend spoofed IPs before nginx appends the real one
+    # Only use as fallback, and take the LAST entry (nginx-appended) not the first
+    xff = request.headers.get("x-forwarded-for")
+    if xff:
+        # nginx appends real IP at end: "spoofed, proxy, real_client"
+        # Take the last non-empty entry which is the one nginx added
+        parts = [p.strip() for p in xff.split(",") if p.strip()]
+        if parts:
+            return parts[-1]
+    # Direct connection (no proxy)
+    if request.client:
+        return request.client.host
+    return "127.0.0.1"
+
+
+limiter = Limiter(key_func=get_client_ip)
 
 DEPARTMENTS = [
     ("Health Department", "HEALTH"),
@@ -124,12 +151,6 @@ async def get_depts(db: AsyncSession):
     return result.scalars().all()
 
 
-async def create_notification(db: AsyncSession, user_id: int, title: str, message: str, ticket_id: int = None):
-    notif = Notification(user_id=user_id, ticket_id=ticket_id, title=title, message=message)
-    db.add(notif)
-    await db.commit()
-
-
 # ─── CSRF Validation Helper ──────────────────────────────────────
 def require_csrf(request: Request, csrf_token: str = Form(None)):
     """Validate CSRF token for form submissions. Raises 403 if invalid."""
@@ -139,6 +160,34 @@ def require_csrf(request: Request, csrf_token: str = Form(None)):
             raise HTTPException(status_code=403, detail="CSRF token invalid")
     elif session_token and not csrf_token:
         raise HTTPException(status_code=403, detail="CSRF token missing")
+# ─── Ticket Access Control ────────────────────────────────────────
+async def require_ticket_access(request: Request, ticket, db: AsyncSession):
+    """Check if the current user can access/modify a ticket.
+    - admin: full access
+    - department: access to tickets in their department
+    - citizen: can only access their own tickets (view only, no modification)
+    Raises HTTPException 403 if access denied.
+    """
+    user = get_user(request)
+    if not user:
+        raise HTTPException(status_code=302, detail="Redirect to login")
+    role = user["role"]
+    if role == "admin":
+        return  # Admin can do anything
+    if role == "department":
+        # Department users can access tickets assigned to their department
+        dept_user = await db.get(User, user["user_id"])
+        if dept_user and ticket.assigned_to_dept == dept_user.department_id:
+            return  # Department match
+        # Also allow if ticket is unassigned (they might need to claim it)
+        if not ticket.assigned_to_dept:
+            return
+        raise HTTPException(status_code=403, detail="You can only access tickets in your department")
+    # Citizen: only view own tickets
+    if ticket.submitted_by == user["user_id"]:
+        return  # Own ticket — view only
+    raise HTTPException(status_code=403, detail="You can only view your own tickets")
+
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -174,8 +223,8 @@ async def login_submit(
         })
 
     token = create_session_token(user.id, user.role)
-    response = RedirectResponse(url="/", status_code=303)
-    response.set_cookie("session", token, max_age=settings.SESSION_MAX_AGE, httponly=True, samesite="lax")
+    response = RedirectResponse(url="/dashboard", status_code=303)
+    response.set_cookie("session", token, max_age=settings.SESSION_MAX_AGE, httponly=True, secure=True, samesite="lax")
     return response
 
 
@@ -216,7 +265,7 @@ async def register_submit(
 
     token = create_session_token(user.id, user.role)
     response = RedirectResponse(url="/", status_code=303)
-    response.set_cookie("session", token, max_age=settings.SESSION_MAX_AGE, httponly=True, samesite="lax")
+    response.set_cookie("session", token, max_age=settings.SESSION_MAX_AGE, httponly=True, secure=True, samesite="lax")
     return response
 
 
@@ -260,6 +309,34 @@ async def track_search(
 # ═══════════════════════════════════════════════════════════════════
 
 @app.get("/", response_class=HTMLResponse)
+async def landing_page(request: Request, db: AsyncSession = Depends(get_db)):
+    """Public landing page — no auth required."""
+    # Get public stats
+    total = (await db.execute(select(func.count(Ticket.id)))).scalar() or 0
+    resolved = (await db.execute(select(func.count(Ticket.id)).where(Ticket.status == "resolved"))).scalar() or 0
+    in_progress = (await db.execute(select(func.count(Ticket.id)).where(Ticket.status.in_(["assigned", "in_progress"])))).scalar() or 0
+    cities = (await db.execute(select(func.count(func.distinct(Ticket.city))).where(Ticket.city.isnot(None), Ticket.city != ""))).scalar() or 0
+
+    # Get active announcements
+    ann_result = await db.execute(
+        select(Announcement)
+        .where(Announcement.is_active == True)
+        .order_by(Announcement.is_pinned.desc(), Announcement.created_at.desc())
+        .limit(20)
+    )
+    announcements = ann_result.scalars().all()
+
+    return templates.TemplateResponse("landing.html", {
+        "request": request,
+        "total": total,
+        "resolved": resolved,
+        "in_progress": in_progress,
+        "cities": cities,
+        "announcements": announcements,
+    })
+
+
+@app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(request: Request, db: AsyncSession = Depends(get_db)):
     user = get_user(request)
     if not user:
@@ -324,6 +401,7 @@ async def submit_page(request: Request, db: AsyncSession = Depends(get_db)):
 
 
 @app.post("/submit")
+@limiter.limit("10/minute")
 async def submit_ticket(
     request: Request,
     subject: str = Form(...),
@@ -381,15 +459,10 @@ async def submit_ticket(
     )
     db.add(history)
 
-    # Create notification for admin
-    all_users = await db.execute(select(User).where(User.role == "admin"))
-    for admin_user in all_users.scalars().all():
-        notif_msg = f"Ticket {ticket_number} submitted."
-        if ai_dept:
-            notif_msg += f" AI Suggested Department: {ai_dept}"
-        await create_notification(
-            db, admin_user.id, f"New Ticket: {subject[:50]}", notif_msg, ticket.id
-        )
+    # Notify admin (in-app + email to minister)
+    submitter_user = await db.get(User, user["user_id"])
+    submitter_name = submitter_user.full_name if submitter_user else f"User #{user['user_id']}"
+    await notify_admin_new_ticket(db, ticket, submitter_name)
 
     await db.commit()
     return RedirectResponse(url=f"/ticket/{ticket.id}", status_code=303)
@@ -470,6 +543,11 @@ async def ticket_update(
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
 
+    # Role-based access: admin/department can modify, citizen cannot
+    if user["role"] == "citizen":
+        raise HTTPException(status_code=403, detail="Citizens cannot modify tickets. View only.")
+    await require_ticket_access(request, ticket, db)
+
     old_status = ticket.status
 
     if status:
@@ -491,12 +569,24 @@ async def ticket_update(
         note=note or f"Updated by {user['role']}",
     )
     db.add(history)
+
+    # Notify citizen if status changed
+    if status and status != old_status:
+        admin_user_obj = await db.get(User, user["user_id"])
+        admin_name = admin_user_obj.full_name if admin_user_obj else f"Admin #{user['user_id']}"
+        await notify_citizen_status_change(
+            db, ticket, old_status, status,
+            admin_name,
+            note,
+        )
+
     await db.commit()
 
     return RedirectResponse(url=f"/ticket/{ticket.id}", status_code=303)
 
 
 @app.post("/ticket/{ticket_id}/upload")
+@limiter.limit("5/minute")
 async def upload_file(
     request: Request,
     ticket_id: int,
@@ -511,6 +601,15 @@ async def upload_file(
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
 
+    # Role-based access: admin/department can upload to any accessible ticket,
+    # citizen can only upload to their own tickets
+    await require_ticket_access(request, ticket, db)
+
+    # Validate file extension
+    allowed_extensions = {'.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png', '.gif', '.txt', '.csv', '.xlsx'}
+    ext = os.path.splitext(file.filename or '')[1].lower()
+    if ext not in allowed_extensions:
+        raise HTTPException(status_code=400, detail=f"File type '{ext}' not allowed. Allowed: {', '.join(sorted(allowed_extensions))}")
     stored_name = f"{uuid.uuid4().hex}_{file.filename}"
     upload_dir = os.path.join(os.path.dirname(BASE_DIR), "uploads", str(ticket_id))
     os.makedirs(upload_dir, exist_ok=True)
@@ -532,7 +631,16 @@ async def upload_file(
 
 
 @app.get("/uploads/{ticket_id}/{stored_name}")
-async def download_file(ticket_id: int, stored_name: str):
+async def download_file(request: Request, ticket_id: int, stored_name: str, db: AsyncSession = Depends(get_db)):
+    user = get_user(request)
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+
+    ticket = await db.get(Ticket, ticket_id)
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    await require_ticket_access(request, ticket, db)
+
     file_path = os.path.join(os.path.dirname(BASE_DIR), "uploads", str(ticket_id), stored_name)
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="File not found")
@@ -681,8 +789,10 @@ async def admin_create_user(
 async def admin_toggle_user(
     request: Request,
     user_id: int,
+    csrf_token: str = Form(None),
     db: AsyncSession = Depends(get_db),
 ):
+    require_csrf(request, csrf_token)
     user = get_user(request)
     if not user or user["role"] != "admin":
         return RedirectResponse(url="/login", status_code=303)
@@ -700,8 +810,10 @@ async def admin_update_role(
     user_id: int,
     role: str = Form(...),
     department_id: int = Form(None),
+    csrf_token: str = Form(None),
     db: AsyncSession = Depends(get_db),
 ):
+    require_csrf(request, csrf_token)
     user = get_user(request)
     if not user or user["role"] != "admin":
         return RedirectResponse(url="/login", status_code=303)
@@ -806,6 +918,44 @@ async def mark_all_read(request: Request, db: AsyncSession = Depends(get_db)):
 # ═══════════════════════════════════════════════════════════════════
 # API ENDPOINTS (JSON)
 # ═══════════════════════════════════════════════════════════════════
+
+@app.get("/api/notifications/unread")
+async def api_unread_count(request: Request, db: AsyncSession = Depends(get_db)):
+    """Return unread notification count for AJAX polling."""
+    user = get_user(request)
+    if not user:
+        return JSONResponse({"count": 0})
+    count = await get_unread_count(db, user["user_id"])
+    return JSONResponse({"count": count})
+
+
+@app.get("/api/notifications/recent")
+async def api_recent_notifications(request: Request, db: AsyncSession = Depends(get_db)):
+    """Return last 5 notifications for dropdown."""
+    user = get_user(request)
+    if not user:
+        return JSONResponse({"notifications": []})
+    result = await db.execute(
+        select(Notification)
+        .where(Notification.user_id == user["user_id"])
+        .order_by(Notification.created_at.desc())
+        .limit(5)
+    )
+    notifs = result.scalars().all()
+    return JSONResponse({
+        "notifications": [
+            {
+                "id": n.id,
+                "title": n.title,
+                "message": n.message,
+                "ticket_id": n.ticket_id,
+                "is_read": n.is_read,
+                "created_at": n.created_at.isoformat() if n.created_at else None,
+            }
+            for n in notifs
+        ]
+    })
+
 
 @app.get("/api/stats")
 async def api_stats(db: AsyncSession = Depends(get_db)):
@@ -982,6 +1132,146 @@ async def api_analytics_city(db: AsyncSession = Depends(get_db)):
     return {r[0]: r[1] for r in result.all()}
 
 
+# ═══════════════════════════════════════════════════════════════════
+#  PUBLIC APIs (no auth required)
+# ═══════════════════════════════════════════════════════════════════
+
+@app.get("/api/public/stats")
+async def public_stats(db: AsyncSession = Depends(get_db)):
+    """Public statistics for the landing page."""
+    total = (await db.execute(select(func.count(Ticket.id)))).scalar() or 0
+    resolved = (await db.execute(select(func.count(Ticket.id)).where(Ticket.status == "resolved"))).scalar() or 0
+    in_progress = (await db.execute(select(func.count(Ticket.id)).where(Ticket.status.in_(["assigned", "in_progress"])))).scalar() or 0
+    cities = (await db.execute(select(func.count(func.distinct(Ticket.city))).where(Ticket.city.isnot(None), Ticket.city != ""))).scalar() or 0
+    departments = (await db.execute(select(func.count(Department.id)).where(Department.is_active == True))).scalar() or 0
+    return JSONResponse({
+        "total_tickets": total,
+        "resolved_tickets": resolved,
+        "in_progress_tickets": in_progress,
+        "cities_covered": cities,
+        "active_departments": departments,
+    })
+
+
+@app.get("/api/public/announcements")
+async def public_announcements(db: AsyncSession = Depends(get_db)):
+    """Active announcements for the public landing page."""
+    result = await db.execute(
+        select(Announcement)
+        .where(Announcement.is_active == True)
+        .order_by(Announcement.is_pinned.desc(), Announcement.created_at.desc())
+        .limit(20)
+    )
+    items = []
+    for a in result.scalars().all():
+        items.append({
+            "id": a.id,
+            "title": a.title,
+            "body": a.body,
+            "image_url": a.image_url or "",
+            "priority": a.priority,
+            "is_pinned": a.is_pinned,
+            "created_at": a.created_at.isoformat() if a.created_at else "",
+        })
+    return JSONResponse(items)
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  ADMIN ANNOUNCEMENT CRUD
+# ═══════════════════════════════════════════════════════════════════
+
+@app.get("/admin/announcements", response_class=HTMLResponse)
+async def admin_announcements_page(request: Request, db: AsyncSession = Depends(get_db)):
+    user = get_user(request)
+    if not user or user["role"] != "admin":
+        return RedirectResponse(url="/login", status_code=303)
+    result = await db.execute(
+        select(Announcement).order_by(Announcement.created_at.desc())
+    )
+    announcements_list = result.scalars().all()
+    unread = await get_unread_count(db, user["user_id"])
+    return templates.TemplateResponse("admin_announcements.html", {
+        "request": request, "user": user,
+        "announcements": announcements_list,
+        "unread_count": unread, "is_admin": True,
+    })
+
+
+@app.post("/admin/announcements/create")
+async def admin_create_announcement(
+    request: Request,
+    title: str = Form(...),
+    body: str = Form(...),
+    priority: str = Form("normal"),
+    is_pinned: bool = Form(False),
+    image_url: str = Form(""),
+    csrf_token: str = Form(None),
+    db: AsyncSession = Depends(get_db),
+):
+    require_csrf(request, csrf_token)
+    user = get_user(request)
+    if not user or user["role"] != "admin":
+        return RedirectResponse(url="/login", status_code=303)
+    ann = Announcement(
+        title=title, body=body, priority=priority,
+        is_pinned=is_pinned, image_url=image_url,
+    )
+    db.add(ann)
+    await db.commit()
+    return RedirectResponse(url="/admin/announcements", status_code=303)
+
+
+@app.post("/admin/announcements/{ann_id}/toggle")
+async def admin_toggle_announcement(
+    request: Request, ann_id: int,
+    csrf_token: str = Form(None),
+    db: AsyncSession = Depends(get_db),
+):
+    require_csrf(request, csrf_token)
+    user = get_user(request)
+    if not user or user["role"] != "admin":
+        return RedirectResponse(url="/login", status_code=303)
+    ann = await db.get(Announcement, ann_id)
+    if ann:
+        ann.is_active = not ann.is_active
+        await db.commit()
+    return RedirectResponse(url="/admin/announcements", status_code=303)
+
+
+@app.post("/admin/announcements/{ann_id}/pin")
+async def admin_pin_announcement(
+    request: Request, ann_id: int,
+    csrf_token: str = Form(None),
+    db: AsyncSession = Depends(get_db),
+):
+    require_csrf(request, csrf_token)
+    user = get_user(request)
+    if not user or user["role"] != "admin":
+        return RedirectResponse(url="/login", status_code=303)
+    ann = await db.get(Announcement, ann_id)
+    if ann:
+        ann.is_pinned = not ann.is_pinned
+        await db.commit()
+    return RedirectResponse(url="/admin/announcements", status_code=303)
+
+
+@app.post("/admin/announcements/{ann_id}/delete")
+async def admin_delete_announcement(
+    request: Request, ann_id: int,
+    csrf_token: str = Form(None),
+    db: AsyncSession = Depends(get_db),
+):
+    require_csrf(request, csrf_token)
+    user = get_user(request)
+    if not user or user["role"] != "admin":
+        return RedirectResponse(url="/login", status_code=303)
+    ann = await db.get(Announcement, ann_id)
+    if ann:
+        await db.delete(ann)
+        await db.commit()
+    return RedirectResponse(url="/admin/announcements", status_code=303)
+
+
 # ─── Chatbot API ──────────────────────────────────────────────────
 
 @app.get("/api/chat/welcome")
@@ -1027,6 +1317,7 @@ async def chat_clear_endpoint(request: Request, db: AsyncSession = Depends(get_d
 
 
 @app.post("/api/chat")
+@limiter.limit("20/minute")
 async def chat_endpoint(
     request: Request,
     message: str = Form(...),

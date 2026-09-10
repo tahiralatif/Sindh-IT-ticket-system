@@ -50,7 +50,9 @@
             <li><a href="/admin/tickets" class="{{ 'active' if active_page == 'tickets' }}"><i class="fa fa-ticket-alt icon"></i>All Tickets</a></li>
             <li><a href="/admin/users" class="{{ 'active' if active_page == 'users' }}"><i class="fa fa-users-cog icon"></i>User Management</a></li>
             <li><a href="/admin/analytics" class="{{ 'active' if active_page == 'analytics' }}"><i class="fa fa-chart-bar icon"></i>Analytics</a></li>
+            <li><a href="/admin/announcements" class="{{ 'active' if active_page == 'announcements' }}"><i class="fa fa-bullhorn icon"></i>Announcements</a></li>
             {% endif %}
+            <li><a href="/" class=""><i class="fa fa-globe icon"></i>Public Site</a></li>
             <li><a href="/notifications" class="{{ 'active' if active_page == 'notifications' }}"><i class="fa fa-bell icon"></i>Notifications</a></li>
         </ul>
     </div>
@@ -68,6 +70,7 @@
         <a href="/admin/tickets" class="{{ 'active' if active_page == 'tickets' }}"><span class="icon">🎫</span> All Tickets</a>
         <a href="/admin/users" class="{{ 'active' if active_page == 'users' }}"><span class="icon">👥</span> User Management</a>
         <a href="/admin/analytics" class="{{ 'active' if active_page == 'analytics' }}"><span class="icon">📈</span> Analytics</a>
+        <a href="/admin/announcements" class="{{ 'active' if active_page == 'announcements' }}"><span class="icon">📢</span> Announcements</a>
         {% endif %}
         <a href="/notifications" class="{{ 'active' if active_page == 'notifications' }}">
             <span class="icon">🔔</span> Notifications
